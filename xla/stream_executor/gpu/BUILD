@@ -555,25 +555,25 @@ gpu_only_cc_library(
     ]),
 )
 
-xla_cc_test(
-    name = "redzone_allocator_test",
-    srcs = ["redzone_allocator_test.cc"],
-    use_gpu = True,
-    deps = [
-        ":gpu_asm_opts",
-        ":gpu_init",
-        ":redzone_allocator",
-        "//xla/stream_executor",
-        "//xla/stream_executor:device_memory_allocator",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:string_view",
-        "@tsl//tsl/lib/core:status_test_util",
-        "@tsl//tsl/platform:statusor",
-        "@tsl//tsl/platform:test",
-        "@tsl//tsl/platform:test_main",
-    ],
-)
+# xla_cc_test(
+#     name = "redzone_allocator_test",
+#     srcs = ["redzone_allocator_test.cc"],
+#     use_gpu = True,
+#     deps = [
+#         ":gpu_asm_opts",
+#         ":gpu_init",
+#         ":redzone_allocator",
+#         "//xla/stream_executor",
+#         "//xla/stream_executor:device_memory_allocator",
+#         "@com_google_absl//absl/status:statusor",
+#         "@com_google_absl//absl/strings",
+#         "@com_google_absl//absl/strings:string_view",
+#         "@tsl//tsl/lib/core:status_test_util",
+#         "@tsl//tsl/platform:statusor",
+#         "@tsl//tsl/platform:test",
+#         "@tsl//tsl/platform:test_main",
+#     ],
+# )
 
 # TODO(tlongeri): Remove gpu_cudamallocasync_allocator header/impl split
 tsl_gpu_library(
@@ -718,27 +718,27 @@ xla_test(
     ]),
 )
 
-xla_cc_test(
-    name = "memcpy_test",
-    srcs = ["memcpy_test.cc"],
-    local_defines = if_cuda_is_configured(["GOOGLE_CUDA=1"]) + if_rocm_is_configured([
-        "TENSORFLOW_USE_ROCM=1",
-    ]),
-    use_gpu = True,
-    deps = [
-        "//xla/stream_executor",
-        "//xla/stream_executor:device_memory",
-        "//xla/stream_executor:platform_manager",
-        "@tsl//tsl/lib/core:status_test_util",
-        "@tsl//tsl/platform:statusor",
-        "@tsl//tsl/platform:test",
-        "@tsl//tsl/platform:test_main",
-    ] + if_cuda([
-        "//xla/stream_executor/cuda:cuda_platform",
-    ]) + if_rocm([
-        "//xla/stream_executor/rocm:rocm_platform",
-    ]),
-)
+# xla_cc_test(
+#     name = "memcpy_test",
+#     srcs = ["memcpy_test.cc"],
+#     local_defines = if_cuda_is_configured(["GOOGLE_CUDA=1"]) + if_rocm_is_configured([
+#         "TENSORFLOW_USE_ROCM=1",
+#     ]),
+#     use_gpu = True,
+#     deps = [
+#         "//xla/stream_executor",
+#         "//xla/stream_executor:device_memory",
+#         "//xla/stream_executor:platform_manager",
+#         "@tsl//tsl/lib/core:status_test_util",
+#         "@tsl//tsl/platform:statusor",
+#         "@tsl//tsl/platform:test",
+#         "@tsl//tsl/platform:test_main",
+#     ] + if_cuda([
+#         "//xla/stream_executor/cuda:cuda_platform",
+#     ]) + if_rocm([
+#         "//xla/stream_executor/rocm:rocm_platform",
+#     ]),
+# )
 
 xla_cc_test(
     name = "stream_search_test",

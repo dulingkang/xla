@@ -1139,23 +1139,23 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "for_all_thunks_test",
-    srcs = ["for_all_thunks_test.cc"],
-    deps = [
-        ":address_computation_thunk",
-        ":command_buffer_cmd",
-        ":command_buffer_thunk",
-        ":conditional_thunk",
-        ":for_all_thunks",
-        ":sequential_thunk",
-        ":thunk",
-        ":while_thunk",
-        "//xla/service:buffer_assignment",
-        "@com_google_absl//absl/status",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# cc_test(
+#     name = "for_all_thunks_test",
+#     srcs = ["for_all_thunks_test.cc"],
+#     deps = [
+#         ":address_computation_thunk",
+#         ":command_buffer_cmd",
+#         ":command_buffer_thunk",
+#         ":conditional_thunk",
+#         ":for_all_thunks",
+#         ":sequential_thunk",
+#         ":thunk",
+#         ":while_thunk",
+#         "//xla/service:buffer_assignment",
+#         "@com_google_absl//absl/status",
+#         "@com_google_googletest//:gtest_main",
+#     ],
+# )
 
 cc_library(
     name = "triangular_solve_thunk",

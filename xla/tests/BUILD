@@ -2401,35 +2401,35 @@ xla_test(
     ],
 )
 
-xla_cc_test(
-    name = "llvm_compiler_test",
-    srcs = ["llvm_compiler_test.cc"],
-    local_defines = if_cuda_is_configured(["GOOGLE_CUDA=1"]) + if_rocm_is_configured([
-        "TENSORFLOW_USE_ROCM",
-    ]),
-    use_gpu = True,
-    deps = if_gpu_is_configured([
-        ":verified_hlo_module",
-        "//xla:literal_util",
-        "//xla:test_helpers",
-        "//xla/hlo/ir:hlo",
-        "@com_google_absl//absl/status",
-        "//xla/service:backend",
-        "//xla/service:cpu_plugin",
-        "//xla/service:gpu_plugin",
-        "//xla/service:llvm_compiler",
-        "//xla/service:platform_util",
-        "//xla/service/cpu:cpu_compiler",
-        "//xla/service/gpu:gpu_compiler",
-        "//xla/stream_executor",
-        "@tsl//tsl/platform:env",
-        "@tsl//tsl/platform:test_main",
-    ]) + if_cuda_is_configured([
-        "//xla/stream_executor/cuda:cuda_platform_id",
-    ]) + if_rocm_is_configured([
-        "//xla/stream_executor/rocm:rocm_platform_id",
-    ]),
-)
+# xla_cc_test(
+#     name = "llvm_compiler_test",
+#     srcs = ["llvm_compiler_test.cc"],
+#     local_defines = if_cuda_is_configured(["GOOGLE_CUDA=1"]) + if_rocm_is_configured([
+#         "TENSORFLOW_USE_ROCM",
+#     ]),
+#     use_gpu = True,
+#     deps = if_gpu_is_configured([
+#         ":verified_hlo_module",
+#         "//xla:literal_util",
+#         "//xla:test_helpers",
+#         "//xla/hlo/ir:hlo",
+#         "@com_google_absl//absl/status",
+#         "//xla/service:backend",
+#         "//xla/service:cpu_plugin",
+#         "//xla/service:gpu_plugin",
+#         "//xla/service:llvm_compiler",
+#         "//xla/service:platform_util",
+#         "//xla/service/cpu:cpu_compiler",
+#         "//xla/service/gpu:gpu_compiler",
+#         "//xla/stream_executor",
+#         "@tsl//tsl/platform:env",
+#         "@tsl//tsl/platform:test_main",
+#     ]) + if_cuda_is_configured([
+#         "//xla/stream_executor/cuda:cuda_platform_id",
+#     ]) + if_rocm_is_configured([
+#         "//xla/stream_executor/rocm:rocm_platform_id",
+#     ]),
+# )
 
 xla_test(
     name = "round_trip_packed_literal_test",

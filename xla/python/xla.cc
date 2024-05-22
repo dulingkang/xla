@@ -32,18 +32,18 @@ limitations under the License.
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
-#include "nanobind/nanobind.h"  // from @nanobind
-#include "nanobind/nb_defs.h"  // from @nanobind
-#include "nanobind/stl/function.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/optional.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/pair.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/set.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/shared_ptr.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/string.h"  // from @nanobind  // IWYU pragma: keep
+#include "nanobind/nanobind.h"         // from @nanobind
+#include "nanobind/nb_defs.h"          // from @nanobind
+#include "nanobind/stl/function.h"     // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/optional.h"     // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/pair.h"         // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/set.h"          // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/shared_ptr.h"   // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/string.h"       // from @nanobind  // IWYU pragma: keep
 #include "nanobind/stl/string_view.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/unique_ptr.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/variant.h"  // from @nanobind  // IWYU pragma: keep
-#include "nanobind/stl/vector.h"  // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/unique_ptr.h"   // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/variant.h"      // from @nanobind  // IWYU pragma: keep
+#include "nanobind/stl/vector.h"       // from @nanobind  // IWYU pragma: keep
 #include "xla/ffi/ffi_api.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/client.h"
@@ -62,7 +62,7 @@ limitations under the License.
 #endif  // XLA_PYTHON_ENABLE_GPU
 
 #ifdef __linux__
-#include "gloo/transport/tcp/attr.h"  // from @gloo
+#include "gloo/transport/tcp/attr.h"    // from @gloo
 #include "gloo/transport/tcp/device.h"  // from @gloo
 #include "xla/pjrt/cpu/gloo_collectives.h"
 #include "xla/pjrt/cpu/gloo_kv_store.h"
@@ -87,7 +87,7 @@ limitations under the License.
 #include "xla/python/logging.h"  // IWYU pragma: keep
 #include "xla/python/mlir.h"
 #include "xla/python/nb_absl_flat_hash_map.h"  // IWYU pragma: keep
-#include "xla/python/nb_absl_span.h"  // IWYU pragma: keep
+#include "xla/python/nb_absl_span.h"           // IWYU pragma: keep
 #include "xla/python/nb_class_ptr.h"
 #include "xla/python/ops.h"
 #include "xla/python/outfeed_receiver_py.h"
@@ -112,6 +112,10 @@ limitations under the License.
 #include "xla/tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 #include "tsl/platform/platform.h"
 #include "tsl/platform/status.h"
+
+/*******added by mesha ********/
+// #include "xla/service/spmd/auto_sharding.h"
+
 
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
 
@@ -404,28 +408,27 @@ NB_MODULE(xla_extension, m_nb) {
             GetCApiTopology(static_cast<const PJRT_Api*>(c_api.data()),
                             topology_name, options));
       });
-  m_nb.def(
-      "get_topology_for_devices",
-      [](const std::vector<nb_class_ptr<PyDevice>>& py_devices) {
-        if (py_devices.empty()) {
-          throw nb::value_error(
-              "get_topology_for_devices requires >= 1 devices.");
-        }
-        auto client = py_devices[0]->client();
-        ifrt::DeviceList::Devices ifrt_devices;
-        ifrt_devices.reserve(py_devices.size());
-        for (const auto& py_device : py_devices) {
-          if (py_device->client().get() != client.get()) {
-            throw nb::value_error(
-                "devices passed to get_topology_for_devices come from "
-                "different clients.");
-          }
-          ifrt_devices.push_back(py_device->device());
-        }
-        ifrt::DeviceList device_list(std::move(ifrt_devices));
-        return xla::ValueOrThrow(
-            client->ifrt_client()->GetTopologyForDevices(device_list));
-      });
+  m_nb.def("get_topology_for_devices",
+           [](const std::vector<nb_class_ptr<PyDevice>>& py_devices) {
+             if (py_devices.empty()) {
+               throw nb::value_error(
+                   "get_topology_for_devices requires >= 1 devices.");
+             }
+             auto client = py_devices[0]->client();
+             ifrt::DeviceList::Devices ifrt_devices;
+             ifrt_devices.reserve(py_devices.size());
+             for (const auto& py_device : py_devices) {
+               if (py_device->client().get() != client.get()) {
+                 throw nb::value_error(
+                     "devices passed to get_topology_for_devices come from "
+                     "different clients.");
+               }
+               ifrt_devices.push_back(py_device->device());
+             }
+             ifrt::DeviceList device_list(std::move(ifrt_devices));
+             return xla::ValueOrThrow(
+                 client->ifrt_client()->GetTopologyForDevices(device_list));
+           });
 
   TF_CHECK_OK(PyArray::RegisterTypes(m_nb));
   jax::RegisterDeviceList(m_nb);
@@ -896,6 +899,18 @@ NB_MODULE(xla_extension, m_nb) {
   m_nb.def("check_and_canonicalize_memory_kind",
            &jax::CheckAndCanonicalizeMemoryKind, nb::arg("memory_kind").none(),
            nb::arg("device_list"));
+
+  /*******************added by mesha**************/
+  // m_nb.def(
+  //     "run_auto_sharding",
+  //     [](HloModule* hlo_module, const CompileOptions& options) {
+  //       spmd::RunAutoShardingPass(hlo_module, options);
+  //       return xla::OkStatus();
+  //     },
+  //     "Compile options for running auto sharding pass");
+  
+  /*******************end added by mesha**************/
+
 }  // NOLINT(readability/fn_size)
 
 }  // namespace xla
