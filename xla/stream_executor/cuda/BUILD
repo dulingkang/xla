@@ -72,6 +72,7 @@ cuda_only_cc_library(
             ":cuda_platform_id",
             ":cuda_runtime",
             "//xla/stream_executor",
+            "//xla/stream_executor:executor_cache",  # hhq
             "//xla/stream_executor:platform_manager",
             "//xla/stream_executor:stream_executor_interface",
             "//xla/stream_executor/gpu:gpu_driver_header",

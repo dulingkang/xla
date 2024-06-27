@@ -901,13 +901,13 @@ NB_MODULE(xla_extension, m_nb) {
            nb::arg("device_list"));
 
   /*******************added by mesha**************/
-  // m_nb.def(
-  //     "run_auto_sharding",
-  //     [](HloModule* hlo_module, const CompileOptions& options) {
-  //       spmd::RunAutoShardingPass(hlo_module, options);
-  //       return xla::OkStatus();
-  //     },
-  //     "Compile options for running auto sharding pass");
+  m_nb.def(
+      "run_auto_sharding",
+      [](HloModule* hlo_module, const CompileOptions& options) {
+        spmd::RunAutoShardingPass(hlo_module, options);
+        return xla::OkStatus();
+      },
+      "Compile options for running auto sharding pass");
   
   /*******************end added by mesha**************/
 

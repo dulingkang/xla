@@ -310,7 +310,7 @@ class DiscoverablePathsAndVersions:
           tuple(line.split(": "))
           for line in find_cuda_config_proc.stdout.strip().split("\n")
       )
-
+      
       self.cublas_version = self.cublas_version or cuda_config["cublas_version"]
       self.cuda_toolkit_path = (
           self.cuda_toolkit_path or cuda_config["cuda_toolkit_path"]

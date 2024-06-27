@@ -25,9 +25,11 @@ cc_library(
         "auto_sharding.cc",
         "auto_sharding_dot_handler.cc",
         "auto_sharding_strategy.cc",
+        "slice_auto_sharded_stages.cc",  # hhq
     ],
     hdrs = [
         "auto_sharding.h",
+        "slice_auto_sharded_stages.h",  # hhq
     ],
     compatible_with = get_compatible_with_libtpu_portable(),
     deps = [
@@ -79,6 +81,7 @@ cc_library(
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:status",
         "@tsl//tsl/platform:statusor",
+        "@nanobind",  # hhq
     ] + xla_internal(
         ["experimental/auto_sharding:auto_sharding_impl_internal"],
         otherwise = ["//xla/hlo/experimental/auto_sharding:auto_sharding_impl"],
@@ -300,12 +303,48 @@ cc_library(
 xla_cc_binary(
     name = "auto_sharding_runner",
     srcs = ["auto_sharding_runner.cc"],
+    linkopts = [
+        "-L/root/miniconda3/envs/py39/lib",
+        "-lpython3.9",
+        "-Wl,-rpath,/root/miniconda3/envs/py39/lib",
+    ],
     compatible_with = get_compatible_with_libtpu_portable(),
     deps = [
         ":auto_sharding",
         "//xla:status",
         "//xla/hlo/ir:hlo",
         "//xla/service:hlo_parser",
+        # hhq
+        "//xla/service:compiler",
+        "//xla/service:sharding_remover",
+        "//xla/service:algebraic_simplifier",
+        "//xla/service:call_inliner",
+        "//xla/service/gpu:gpu_conv_rewriter",
+        "//xla/service/gpu:gpu_compiler",
+        "//xla/service:hlo_pass",
+        "//xla/service:sort_simplifier",
+        "//xla/service:dump",
+        "//xla/service:dot_decomposer",
+        "//xla/service:zero_sized_hlo_elimination",
+        "//xla/service:conditional_canonicalizer",
+        "//xla/service:tuple_simplifier",
+        "//xla/service:scatter_expander",
+        "//xla/service:gather_expander",
+        "//xla/service:hlo_cse",
+        "//xla/service:sharding_propagation",
+        "//xla/service:hlo_verifier",
+        "//xla/service:cpu_gpu_shape_verifier",  
+        "//xla/service:while_loop_constant_sinking",  
+        "//xla/service:while_loop_simplifier",  
+        "//xla/service:reshape_mover",  
+        "//xla/service:hlo_constant_folding",  
+        "//xla/service:conditional_simplifier",  
+        "//xla/service:transpose_folding",  
+        "//xla/service/gpu:matmul_utils",  
+        "//xla/client:executable_build_options",
+        "//xla/hlo/transforms:hlo_constant_splitter",
+        "//xla/pjrt:pjrt_executable",
+
         "//xla/tools:hlo_module_loader",
         "@com_google_absl//absl/status",
         "@tsl//tsl/platform:platform_port",
