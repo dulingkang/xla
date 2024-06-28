@@ -1,0 +1,8 @@
+I0521 12:04:45.883483    1509 service.cc:186] HloModule test_log_stripping
+I0521 12:04:45.883483    1509 service.cc:186]
+I0521 12:04:45.883483    1509 service.cc:186] ENTRY entry {
+I0521 12:04:45.883483    1509 service.cc:186]   p0 = f32[4]{0} parameter(0)
+I0521 12:04:45.883483    1509 service.cc:186]   p1 = f32[4]{0} parameter(1)
+I0521 12:04:45.883483    1509 service.cc:186]   add = f32[4]{0} add(p0, p1)
+I0521 12:04:45.883483    1509 service.cc:186]   ROOT rooty = (f32[4]{0}, f32[4]{0}) tuple(p1, add)
+I0521 12:04:45.883483    1509 service.cc:186] }
