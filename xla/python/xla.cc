@@ -114,7 +114,7 @@ limitations under the License.
 #include "tsl/platform/status.h"
 
 /*******added by mesha ********/
-// #include "xla/service/spmd/auto_sharding.h"
+#include "xla/hlo/experimental/auto_sharding/auto_sharding_runner.h"
 
 
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
@@ -901,14 +901,35 @@ NB_MODULE(xla_extension, m_nb) {
            nb::arg("device_list"));
 
   /*******************added by mesha**************/
+  m_nb.def("set_hlo_module_output_shardings", &xla::spmd::SetHloModuleOutputShardings);
+  m_nb.def("set_hlo_module_input_shardings", &xla::spmd::SetHloModuleInputShardings);
+
   m_nb.def(
       "run_auto_sharding",
       [](HloModule* hlo_module, const CompileOptions& options) {
-        spmd::RunAutoShardingPass(hlo_module, options);
+        TF_CHECK_OK(xla::spmd::RunAutoShardingPass(hlo_module, options));
         return xla::OkStatus();
       },
-      "Compile options for running auto sharding pass");
-  
+      "Run auto sharding pass");
+
+  m_nb.def(
+      "run_spmd_partitioner",
+      [](HloModule* hlo_module, const CompileOptions& options) {
+        TF_CHECK_OK(xla::spmd::RunSpmdPartitionerPass(hlo_module, options));
+        return xla::OkStatus();
+      },
+      "Run spmd partitioner pass");
+
+  m_nb.def(
+      "hlo_module_count_flop_dot_conv_only",
+      [](const HloModule& module) -> double {
+        double ret = 0.0;
+        for (HloComputation* computation : module.computations()) {
+          ret += xla::CountFlopDotConvOnly(*computation);
+        }
+        return ret;
+      });
+
   /*******************end added by mesha**************/
 
 }  // NOLINT(readability/fn_size)

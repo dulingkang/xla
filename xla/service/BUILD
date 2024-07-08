@@ -7960,4 +7960,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "pass_context",
+    srcs = [
+        "pass_context.cc",
+    ],
+    hdrs = [
+        "pass_context.h",
+    ],
+    deps = [
+        "//xla:types",
+        "//xla:util",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/types:any",
+        "@nanobind",
+    ],
+)
+
 exports_files(["xla_aot_compile_test_gpu_target_config.prototxt"])

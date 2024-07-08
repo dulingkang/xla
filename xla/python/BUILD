@@ -55,17 +55,17 @@ exports_files([
     "xla_client.pyi",
 ])
 
-tsl_pybind_extension(
-    name = "custom_calls_testlib",
-    srcs = ["custom_calls_testlib.cc"],
-    visibility = ["//visibility:private"],
-    deps = [
-        "//xla/ffi/api:c_api",
-        "//xla/ffi/api:ffi",
-        "@com_google_absl//absl/status",
-        "@nanobind",
-    ],
-)
+# tsl_pybind_extension(
+#     name = "custom_calls_testlib",
+#     srcs = ["custom_calls_testlib.cc"],
+#     visibility = ["//visibility:private"],
+#     deps = [
+#         "//xla/ffi/api:c_api",
+#         "//xla/ffi/api:ffi",
+#         "@com_google_absl//absl/status",
+#         "@nanobind",
+#     ],
+# )
 
 py_strict_test(
     name = "xla_client_backend_independent_test",
@@ -155,18 +155,18 @@ py_strict_test(
     ) + xla_py_test_deps(),
 )
 
-tsl_pybind_extension(
-    name = "status_casters_ext",
-    srcs = ["status_casters_ext.cc"],
-    visibility = ["//visibility:private"],
-    deps = [
-        "//xla/pjrt:exceptions",
-        "//xla/pjrt:status_casters",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@nanobind",
-    ],
-)
+# tsl_pybind_extension(
+#     name = "status_casters_ext",
+#     srcs = ["status_casters_ext.cc"],
+#     visibility = ["//visibility:private"],
+#     deps = [
+#         "//xla/pjrt:exceptions",
+#         "//xla/pjrt:status_casters",
+#         "@com_google_absl//absl/status",
+#         "@com_google_absl//absl/status:statusor",
+#         "@nanobind",
+#     ],
+# )
 
 py_strict_test(
     name = "status_casters_test",
@@ -990,13 +990,18 @@ cc_library(
         "//xla/pjrt/c:pjrt_c_api_profiler_extension_hdrs",
         "@tsl//tsl/platform:macros",
         "@tsl//tsl/platform:protobuf",
-        "@tsl//tsl/profiler/lib:profiler_factory",
+        # "@tsl//tsl/profiler/lib:profiler_factory",  # hhq
         "@tsl//tsl/profiler/lib:profiler_interface",
-        "@tsl//tsl/profiler/lib:profiler_session",
+        # "@tsl//tsl/profiler/lib:profiler_session",  # hhq
+
         "@tsl//tsl/profiler/lib:traceme",
         "@tsl//tsl/profiler/rpc:profiler_server_impl",
         "@tsl//tsl/profiler/rpc/client:capture_profile",
         "@tsl//tsl/profiler/rpc/client:profiler_client_impl",
+        # hhq
+        "@tsl//tsl/profiler/lib:profiler_factory_impl",
+        "@tsl//tsl/profiler/lib:profiler_session_impl",
+
         "@nanobind",
     ] + select({
         ":gpu_enabled": [
@@ -1221,26 +1226,26 @@ cc_library(
     ],
 )
 
-tsl_pybind_extension(
-    name = "xla_gpu_extension",
-    srcs = ["xla_gpu_support.cc"],
-    copts = [
-        "-fexceptions",
-        "-fno-strict-aliasing",
-    ],
-    features = ["-use_header_modules"],
-    pytype_deps = [],
-    pytype_srcs = [],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gpu_support",
-        ":logging",
-        ":py_client",
-        # placeholder for index annotation deps
-        "@local_config_python//:python_headers",  # buildcleaner: keep
-        "@nanobind",
-    ],
-)
+# tsl_pybind_extension(
+#     name = "xla_gpu_extension",
+#     srcs = ["xla_gpu_support.cc"],
+#     copts = [
+#         "-fexceptions",
+#         "-fno-strict-aliasing",
+#     ],
+#     features = ["-use_header_modules"],
+#     pytype_deps = [],
+#     pytype_srcs = [],
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":gpu_support",
+#         ":logging",
+#         ":py_client",
+#         # placeholder for index annotation deps
+#         "@local_config_python//:python_headers",  # buildcleaner: keep
+#         "@nanobind",
+#     ],
+# )
 
 tsl_pybind_extension(
     name = "xla_extension",
@@ -1319,6 +1324,7 @@ tsl_pybind_extension(
         "//xla:types",
         "//xla:util",
         "//xla/ffi:ffi_api",
+        "//xla/hlo/experimental/auto_sharding:auto_sharding_runner",  # hhq
         "//xla/pjrt:exceptions",
         "//xla/pjrt:mlir_to_hlo",
         "//xla/pjrt:pjrt_api",

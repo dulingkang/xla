@@ -25,6 +25,8 @@ limitations under the License.
 #include "tsl/platform/status.h"
 #include "tsl/profiler/protobuf/profiler_analysis.grpc.pb.h"
 #include "tsl/profiler/protobuf/profiler_service.grpc.pb.h"
+// #include "tsl/profiler/protobuf/profiler_service.pb.h"  // hhq
+// #include "tsl/profiler/rpc/profiler_service_impl.h"  // hhq
 
 namespace tsl {
 namespace profiler {

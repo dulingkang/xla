@@ -16,7 +16,6 @@ if __name__ == "__main__":
       device_assignment=device_assignment,
       use_spmd_partitioning=use_spmd_partitioning,
   )
-  import pdb; pdb.set_trace()
   print(type(compile_options))
   print(compile_options.argument_layouts)
   print(compile_options.parameter_is_tupled_arguments)  # False

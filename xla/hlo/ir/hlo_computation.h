@@ -298,6 +298,9 @@ class HloComputation {
   const HloInstruction::InstructionVector& parameter_instructions() const {
     return param_instructions_;
   }
+  // const std::vector<HloInstruction*>& parameter_instructions() const {
+  //   return param_instructions_;
+  // }  
 
   absl::string_view name() const { return name_; }
 
@@ -963,6 +966,7 @@ class HloComputation {
   HloInstruction* async_start_ = nullptr;
 
   HloInstruction::InstructionVector param_instructions_;
+  // std::vector<HloInstruction*> param_instructions_;
 
   // Store instructions in std::vector as they can be added and removed
   // arbitrarily and we want a stable iteration order.

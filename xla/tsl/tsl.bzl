@@ -37,6 +37,17 @@ load(
     "if_tensorrt",
 )
 
+# hhq
+# load("//xla:xla.bzl", "_XLA_SHARED_OBJECT_SENSITIVE_DEPS")
+load(
+    "@tsl//tsl/platform:build_config_root.bzl",
+    "if_static",
+)
+load(
+    "@tsl//tsl/platform/default:cuda_build_defs.bzl",
+    "if_cuda_is_configured",
+)
+
 # Internally this loads a macro, but in OSS this is a function
 # buildifier: disable=out-of-order-load
 def register_extension_info(**_kwargs):
@@ -578,6 +589,41 @@ _transitive_parameters_library = rule(
     implementation = _transitive_parameters_library_impl,
 )
 
+_XLA_SHARED_OBJECT_SENSITIVE_DEPS = if_static(extra_deps = [], otherwise = [
+    Label("//xla:autotune_results_proto_cc_impl"),
+    Label("//xla:autotuning_proto_cc_impl"),
+    Label("//xla:xla_data_proto_cc_impl"),
+    Label("//xla:xla_proto_cc_impl"),
+    Label("//xla/service:buffer_assignment_proto_cc_impl"),
+    Label("//xla/service:hlo_proto_cc_impl"),
+    Label("//xla/service/gpu:backend_configs_cc_impl"),
+    Label("//xla/service/gpu/model:hlo_op_profile_proto_cc_impl"),
+    Label("//xla/service/memory_space_assignment:memory_space_assignment_proto_cc_impl"),
+    Label("//xla/stream_executor:device_description_proto_cc_impl"),
+    Label("//xla/stream_executor:stream_executor_impl"),
+    Label("//xla/stream_executor/gpu:gpu_init_impl"),
+    "@com_google_protobuf//:protobuf",
+    "@tsl//tsl/framework:allocator_registry_impl",
+    "@tsl//tsl/framework:allocator",
+    "@tsl//tsl/platform:env_impl",
+    "@tsl//tsl/profiler/backends/cpu:annotation_stack_impl",
+    "@tsl//tsl/profiler/backends/cpu:traceme_recorder_impl",
+    "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
+    "@tsl//tsl/profiler/protobuf:xplane_proto_cc_impl",
+    "@tsl//tsl/profiler/utils:time_utils_impl",
+    "@tsl//tsl/protobuf:protos_all_cc_impl",
+]) + if_cuda_is_configured([
+    Label("//xla/stream_executor/cuda:all_runtime"),
+    Label("//xla/stream_executor/cuda:cuda_stream"),
+    Label("//xla/stream_executor/cuda:stream_executor_cuda"),
+    Label("//xla/stream_executor/gpu:gpu_cudamallocasync_allocator"),
+]) + if_rocm_is_configured([
+    Label("//xla/stream_executor/gpu:gpu_stream"),
+    Label("//xla/stream_executor/rocm:all_runtime"),
+    Label("//xla/stream_executor/rocm:stream_executor_rocm"),
+    "//xla/tsl/util:determinism",
+])
+
 # buildozer: disable=function-docstring-args
 def tsl_pybind_extension_opensource(
         name,
@@ -605,6 +651,10 @@ def tsl_pybind_extension_opensource(
         visibility = None,
         win_def_file = None):  # @unused
     """Builds a generic Python extension module."""
+
+    # hhq
+    deps = deps + _XLA_SHARED_OBJECT_SENSITIVE_DEPS
+
     p = name.rfind("/")
     if p == -1:
         sname = name

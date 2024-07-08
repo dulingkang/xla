@@ -131,7 +131,7 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
-    ] + tsl_grpc_cc_dependencies(),
+    ] + tsl_grpc_cc_dependencies() + tf_protos_profiler_service(),
     alwayslink = True,
 )
 

@@ -27,6 +27,7 @@ limitations under the License.
 
 // add by mesha
 #include "xla/hlo/experimental/auto_sharding/slice_auto_sharded_stages.h"
+#include "xla/hlo/experimental/auto_sharding/auto_sharding_util.h"
 #include "xla/service/sharding_remover.h"
 #include "xla/service/hlo_dce.h"
 #include "xla/service/hlo_pass_pipeline.h"
@@ -55,6 +56,12 @@ limitations under the License.
 #include "xla/service/hlo_constant_folding.h"
 #include "xla/service/conditional_simplifier.h"
 #include "xla/service/transpose_folding.h"
+#include "xla/service/all_reduce_reassociate.h"
+#include "xla/service/hlo_cost_analysis.h"
+#include "xla/service/spmd/stateful_rng_spmd_partitioner.h"
+#include "xla/service/spmd/redundant_slice_eliminator.h"
+#include "xla/service/spmd/grad_acc_rewrite.h"
+
 #include "xla/client/executable_build_options.h"
 #include "xla/hlo/transforms/hlo_constant_splitter.h"
 #include "xla/pjrt/pjrt_executable.h"
@@ -62,7 +69,7 @@ limitations under the License.
 
 namespace xla {
 
-namespace {
+// namespace {
 // Adds the HloVerifier for GPU to the given pipeline.
 void AddHloVerifier(HloPassPipeline* pipeline, HloVerifierOpts&& opts = {},
                     bool debug_only = false) {
@@ -80,10 +87,13 @@ void AddHloVerifier(HloPassPipeline* pipeline, HloVerifierOpts&& opts = {},
 bool ConvIsLowerable(HloInstruction* conv) {
   return gpu::GpuConvRewriter::ConvIsLowerable(conv);
 }
-}  // namespace
+// }  // namespace
 
 namespace spmd {
-namespace {
+// namespace {
+
+const char kBeforeAutoShardingDumpName[] = "before_run_auto_sharding";
+const char kBeforeSpmdPartitionDumpName[] = "before_run_spmd_partitioner";
 
 absl::Status RunAutoShardingPassFromFile(const std::string& file_name) {
   std::string hlo_text;
@@ -103,9 +113,6 @@ absl::Status RunAutoShardingPassFromFile(const std::string& file_name) {
   std::cout << hlo_module->ToString() << std::endl;
   return absl::OkStatus();
 }
-
-// add by mesha
-const char kBeforeAutoShardingDumpName[] = "before_run_auto_sharding";
 
 // TODO(yonghao): Check correctness of compile options and modules
 Status PreCompileCheck(const CompileOptions& options) {
@@ -187,7 +194,6 @@ Status RunAutoShardingPass(HloModule* hlo_module,
     HloPassPipeline spmd_pipeline("run-auto-sharding");
     AddHloVerifier(&spmd_pipeline);
     const int64_t num_partitions = hlo_module->config().num_partitions();
-    std::cout << "hhq1:" << num_partitions << std::endl;
     if (num_partitions > 1) {
       // Run some IR cleanup passes before running the SPMD partitioning
       // passes.
@@ -254,51 +260,111 @@ Status RunAutoShardingPass(HloModule* hlo_module,
   return OkStatus();
 }
 
-// Status RunSpmdPartitionerPass(HloModule* hlo_module,
-//                               const CompileOptions& options) {
-//   TF_ASSIGN_OR_RETURN(auto module_config,
-//                       CreateHloModuleConfig(hlo_module, options));
-//   hlo_module->set_config(module_config);
+Status RunSpmdPartitionerPass(HloModule* hlo_module,
+                              const CompileOptions& options) {
+  TF_ASSIGN_OR_RETURN(auto module_config,
+                      CreateHloModuleConfig(hlo_module, options));
+  hlo_module->set_config(module_config);
 
-//   DumpHloModuleIfEnabled(*hlo_module, kBeforeSpmdPartitionDumpName);
+  DumpHloModuleIfEnabled(*hlo_module, kBeforeSpmdPartitionDumpName);
 
-//   // TODO(yonghao): TF Profiler Traceme
-//   if (hlo_module->config().use_spmd_partitioning()) {
-//     HloPassPipeline spmd_pipeline("run-spmd-partitioner");
-//     const int64_t num_partitions = hlo_module->config().num_partitions();
-//     if (num_partitions > 1) {
-//       // hhq
-//       // spmd_pipeline.AddPass<ShardingPropagation>(
-//       //     /*is_spmd=*/true, /*propagate_metadata=*/false,
-//       //     /*allow_spmd_sharding_propagation_to_output=*/true);
-//       spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true);
+  // TODO(yonghao): TF Profiler Traceme
+  if (hlo_module->config().use_spmd_partitioning()) {
+    HloPassPipeline spmd_pipeline("run-spmd-partitioner");
+    const int64_t num_partitions = hlo_module->config().num_partitions();
+    if (num_partitions > 1) {
+      // hhq
+      // spmd_pipeline.AddPass<ShardingPropagation>(
+      //     /*is_spmd=*/true, /*propagate_metadata=*/false,
+      //     /*allow_spmd_sharding_propagation_to_output=*/true);
+      spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true);
 
-//       spmd_pipeline.AddPass<StatefulRngSpmdPartitioner>(
-//           num_partitions, hlo_module->config().replica_count());
-//       spmd_pipeline.AddPass<RedundantSliceEliminator>();
-//       spmd_pipeline.AddPass<AllReduceReassociate>();
-//       spmd_pipeline.AddPass<GradAccRewrite>();
-//     } else {
-//       // Remove redundant sharding ops when partition_count == 1.
-//       spmd_pipeline.AddPass<ShardingRemover>();
-//       spmd_pipeline.AddPass<HloDCE>();
-//     }
-//     TF_RETURN_IF_ERROR(spmd_pipeline.Run(hlo_module).status());
-//   }
-//   return OkStatus();
-// }
+      spmd_pipeline.AddPass<StatefulRngSpmdPartitioner>(
+          num_partitions, hlo_module->config().replica_count());
+      spmd_pipeline.AddPass<RedundantSliceEliminator>();
+      spmd_pipeline.AddPass<AllReduceReassociate>();
+      spmd_pipeline.AddPass<GradAccRewrite>();  // should be used together with XLA_SKIP_NCCL_COLLECTIVE_IDS
+    } else {
+      // Remove redundant sharding ops when partition_count == 1.
+      spmd_pipeline.AddPass<ShardingRemover>();
+      spmd_pipeline.AddPass<HloDCE>();
+    }
+    TF_RETURN_IF_ERROR(spmd_pipeline.Run(hlo_module).status());
+  }
+  std::cout << hlo_module->ToString() << std::endl;
 
-}  // namespace
+  return OkStatus();
+}
+
+Status SetHloModuleOutputShardings(
+    HloModule* module, const std::vector<OpSharding>& op_shardings) {
+  // Run some simplification passes to remove redundant tuples.
+  // Otherwise, these redundant tuples and other custom call markers together
+  // will make the propagation generate unexpected results.
+  HloPassPipeline pipeline("set-sharding-pipeline");
+  pipeline.AddPass<CallInliner>();
+  pipeline.AddPass<TupleSimplifier>();
+  TF_RETURN_IF_ERROR(pipeline.Run(module).status());
+
+  // Set the sharding for the output tuple
+  HloComputation* entry = module->entry_computation();
+  HloInstruction* output_tuple = entry->root_instruction();
+
+  ShapeTree<HloSharding> tuple_sharding(output_tuple->shape(),
+                                        HloSharding::Replicate());
+  CHECK_EQ(tuple_sharding.leaf_count(), op_shardings.size());
+
+  size_t i = 0;
+  for (auto& leaf : tuple_sharding.leaves()) {
+    TF_ASSIGN_OR_RETURN(HloSharding hlo_sharding,
+                        HloSharding::FromProto(op_shardings[i++]));
+    leaf.second = hlo_sharding;
+  }
+  output_tuple->set_sharding(HloSharding::Tuple(tuple_sharding));
+
+  if (IsPassThroughTuple(output_tuple)) {
+    // Also set the operand. Otherwise, the propagation generates unexpected
+    // results.
+    output_tuple->mutable_operand(0)->set_sharding(
+        HloSharding::Tuple(tuple_sharding));
+  }
+
+  return OkStatus();
+}
+
+Status SetHloModuleInputShardings(HloModule* module,
+                                  const std::vector<OpSharding>& op_shardings) {
+  // Run some simplification passes to remove redundant tuples.
+  // Otherwise, these redundant tuples and other custom call markers together
+  // will make the propagation generate unexpected results.
+  HloPassPipeline pipeline("set-sharding-pipeline");
+  pipeline.AddPass<CallInliner>();
+  pipeline.AddPass<TupleSimplifier>();
+  TF_RETURN_IF_ERROR(pipeline.Run(module).status());
+
+  HloComputation* entry = module->entry_computation();
+  // std::vector<HloInstruction*> input_insts = entry->parameter_instructions();
+  HloInstruction::InstructionVector input_insts = entry->parameter_instructions();
+  CHECK_EQ(input_insts.size(), op_shardings.size());
+
+  size_t i = 0;
+  for (auto& inst : input_insts) {
+    TF_ASSIGN_OR_RETURN(HloSharding hlo_sharding,
+                        HloSharding::FromProto(op_shardings[i++]));
+    if (IsUndefined(hlo_sharding)) {
+      continue;
+    }
+    inst->set_sharding(HloSharding::Single(inst->shape(), hlo_sharding));
+  }
+
+  return OkStatus();
+}
+
+// }  // namespace
 }  // namespace spmd
 }  // namespace xla
 
 int main(int argc, char** argv) {
-  tsl::port::InitMain("Run AutoSharding Pass", &argc, &argv);
-  QCHECK(argc == 2) << "Must specify a single input file";
-  TF_CHECK_OK(xla::spmd::RunAutoShardingPassFromFile(argv[1]));
-
-  std::cout << "========================================================" << std::endl;
-
 //   const std::string& hlo_text = R"(I0521 12:04:45.883483    1509 service.cc:186] HloModule test_log_stripping
 // I0521 12:04:45.883483    1509 service.cc:186]
 // I0521 12:04:45.883483    1509 service.cc:186] ENTRY entry {
@@ -307,35 +373,28 @@ int main(int argc, char** argv) {
 // I0521 12:04:45.883483    1509 service.cc:186]   add = f32[4]{0} add(p0, p1)
 // I0521 12:04:45.883483    1509 service.cc:186]   ROOT rooty = (f32[4]{0}, f32[4]{0}) tuple(p1, add)
 // I0521 12:04:45.883483    1509 service.cc:186] })";  
+
+//   const std::string& hlo_text = R"(
+// HloModule module
+// ENTRY matmul {
+//   parameter.1 = f32[32,64]{1,0} parameter(0)
+//   parameter.2 = f32[64,128]{1,0} parameter(1)
+//   ROOT root = f32[32,128]{1,0} dot(parameter.1, parameter.2), lhs_contracting_dims={1}, rhs_contracting_dims={0}
+// })";
+
   const std::string& hlo_text = R"(
-    HloModule test_module, entry_computation_layout={(f32[1024]{0:T(512)})->f32[1024]{0:T(512)}}
+HloModule module
+ENTRY %elementwise {
+  %param0 = f32[16,32,64]{2,1,0} parameter(0)
+  %param1 = f32[16,32,64]{2,1,0} parameter(1)
+  ROOT root = f32[16,32,64]{2,1,0} add(%param0, %param1)
+})";
 
-    reduce.add {
-      a = f32[] parameter(0)
-      b = f32[] parameter(1)
-      ROOT add = f32[] add(a, b)
-    }
+  tsl::port::InitMain("Run AutoSharding Pass", &argc, &argv);
+  QCHECK(argc == 2) << "Must specify a single input file";
+  TF_CHECK_OK(xla::spmd::RunAutoShardingPassFromFile(argv[1]));
 
-    ENTRY entry_computation {
-      constant1 = f32[] constant(1.1)
-      b1 = f32[1024]{0} broadcast(constant1), dimensions={}
-      iota.1 = f32[1024]{0} iota(), iota_dimension=0
-      add.1 = f32[1024]{0} add(b1, iota.1)
-      p0 = f32[1024]{0} parameter(0), sharding={devices=[4]0,1,2,3}
-      custom-call.0 = f32[256]{0} custom-call(p0), custom_call_target="SPMDFullToShardShape", sharding={manual}
-      constant0 = f32[] constant(0)
-      reduce.1 = f32[] reduce(custom-call.0, constant0), dimensions={0}, to_apply=reduce.add
-      b3 = f32[1024]{0} broadcast(reduce.1), dimensions={}
-      add.2 = f32[1024]{0} add(add.1, b3)
-      custom-call.1 = f32[4096]{0} custom-call(add.2), custom_call_target="SPMDShardToFullShape", sharding={devices=[4]0,1,2,3}
-      reshape = f32[4,1024]{1,0} reshape(custom-call.1)
-      reduce.2 = f32[1024]{0} reduce(reshape, constant0), dimensions={0}, to_apply=reduce.add
-      iota.2 = f32[1024]{0} iota(), iota_dimension=0
-      mul = f32[1024]{0} multiply(b1, iota.2)
-      ROOT sub = f32[1024]{0} subtract(reduce.2, mul), sharding={devices=[4]0,1,2,3}
-    } // entry_computation
-  )";
-
+  std::cout << "Test RunAutoShardingPass...\n" << std::endl;
   absl::StatusOr<std::unique_ptr<xla::HloModule>> hlo_module_ptr = xla::LoadModuleFromData(/*data=*/hlo_text, /*format=*/"hlo");
   xla::HloModule* hlo_module;
   if (hlo_module_ptr.ok()) {
@@ -348,7 +407,8 @@ int main(int argc, char** argv) {
   xla::ExecutableBuildOptions build_options = xla::ExecutableBuildOptions();
   build_options.set_device_ordinal(0);
   build_options.set_num_replicas(1);
-  // build_options.set_num_partitions(2);
+  build_options.set_num_partitions(4);
+  build_options.set_use_spmd_partitioning(true);
   xla::CompileOptions options = {};
   options.compile_portable_executable = false;
   options.parameter_is_tupled_arguments = false;
@@ -356,6 +416,13 @@ int main(int argc, char** argv) {
   options.executable_build_options = build_options;
 
   TF_CHECK_OK(xla::spmd::RunAutoShardingPass(hlo_module, options));
+
+  std::cout << "Test RunSpmdPartitionerPass...\n" << std::endl;
+  TF_CHECK_OK(xla::spmd::RunSpmdPartitionerPass(hlo_module, options));
+  // for (xla::HloSharding x:hlo_module->spmd_parameters_shardings()) {
+  //   std::cout << "spmd_parameters_shardings:" << x.ToString() << std::endl;
+  // }
+  // std::cout << "spmd_output_sharding:" << hlo_module->spmd_output_sharding().ToString() << std::endl;
 
   return 0;
 }

@@ -313,6 +313,39 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "redundant_slice_eliminator",
+    srcs = [
+        "redundant_slice_eliminator.cc",
+    ],
+    hdrs = [
+        "redundant_slice_eliminator.h",
+    ],
+    deps = [
+        "//xla:shape_util",
+        "//xla/hlo/ir:hlo",
+        "//xla/service:hlo_dce",
+        "//xla/service:hlo_pass",
+    ],
+)
+
+cc_library(
+    name = "grad_acc_rewrite",
+    srcs = [
+        "grad_acc_rewrite.cc",
+    ],
+    hdrs = [
+        "grad_acc_rewrite.h",
+    ],
+    deps = [
+      "//xla:shape_util",
+      "//xla/hlo/ir:hlo",
+      "//xla/service:hlo_pass",
+      "//xla/service:pass_context",
+      "//xla/service/spmd:spmd_partitioner",
+    ],
+)
+
 xla_cc_test(
     name = "whole_graph_manual_pass_test",
     srcs = ["whole_graph_manual_pass_test.cc"],

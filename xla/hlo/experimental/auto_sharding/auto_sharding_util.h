@@ -225,6 +225,13 @@ inline void ReplaceOperand(HloInstruction* inst,
   }
 }
 
+// Return whether this instruction is a "no-op" pass-through tuple
+inline bool IsPassThroughTuple(const HloInstruction* inst) {
+  return inst->IsCustomCall(kPipelineMarker) ||
+         (inst->opcode() == HloOpcode::kOptimizationBarrier &&
+          inst->shape().IsTuple());
+}
+
 // Return whether this instruction is a custom call marker introduced by us.
 inline bool IsCustomCallMarker(const HloInstruction* inst) {
   return inst->IsCustomCall({kPipelineMarker, kIdentityMarker});
