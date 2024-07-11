@@ -1349,6 +1349,9 @@ tsl_pybind_extension(
         "//xla/python/pjrt_ifrt",
         "//xla/python/pjrt_ifrt:xla_ifrt",
         "//xla/service/cpu:collectives_interface",
+        "//xla/service/spmd:grad_acc_rewrite",  # hhq
+        "//xla/service:pass_context",  # hhq
+        # "//xla/service/gpu:gpu_cost_model",  # hhq
         "//xla/tsl/concurrency:ref_count",
         "//xla/tsl/distributed_runtime/preemption:preemption_sync_manager",
         "//xla/tsl/python/lib/core:numpy",

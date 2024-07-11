@@ -61,6 +61,7 @@ limitations under the License.
 #include "xla/service/spmd/stateful_rng_spmd_partitioner.h"
 #include "xla/service/spmd/redundant_slice_eliminator.h"
 #include "xla/service/spmd/grad_acc_rewrite.h"
+#include "xla/service/pass_context.h"
 
 #include "xla/client/executable_build_options.h"
 #include "xla/hlo/transforms/hlo_constant_splitter.h"
@@ -233,18 +234,37 @@ Status RunAutoShardingPass(HloModule* hlo_module,
       // hhq
       // spmd_pipeline.AddPass<AutoSharding>();
       AutoShardingOption as_option;
-      as_option.enable = true;
-      as_option.device_mesh_shape = {2, 2};
-      as_option.device_mesh_ids = {0, 1, 2, 3};
-      as_option.device_mesh_alpha = {1.0, 1.0};
-      as_option.device_mesh_beta = {0.01, 1.0};
+      as_option.enable = pass_context::GetBool("auto_sharding::enable", true);
+      as_option.memory_budget_per_device = pass_context::GetInt("auto_sharding::memory_budget_per_device", -1);
+      as_option.force_override_all_gather_cost = pass_context::GetBool("auto_sharding::force_all_gather_cost", false);
+      as_option.all_gather_cost = pass_context::GetDouble("auto_sharding::all_gather_cost");
+      as_option.force_override_all_to_all_cost = pass_context::GetBool("auto_sharding::force_all_to_all_cost", false);
+      as_option.all_to_all_cost = pass_context::GetDouble("auto_sharding::all_to_all_cost");
+      as_option.allow_replicated_parameters = pass_context::GetBool("auto_sharding::allow_replicated_parameters", true);
+      as_option.prefer_reduce_scatter = pass_context::GetBool("auto_sharding::prefer_reduce_scatter", false);
+      as_option.reduce_scatter_grad_acc_friendly = pass_context::GetBool("auto_sharding::reduce_scatter_grad_acc_friendly", false);
+      as_option.reduce_scatter_aggressive_partition = pass_context::GetBool("auto_sharding::reduce_scatter_aggressive_partition", false);
+      as_option.batch_matmul_always_split_batch = pass_context::GetBool("auto_sharding::batch_matmul_always_split_batch", false);
+      as_option.allow_recompute_heavy_op = pass_context::GetBool("auto_sharding::allow_recompute_heavy_op", true);
+      as_option.allow_mixed_mesh_shape = pass_context::GetBool("auto_sharding::allow_mixed_mesh_shape", false);
+      as_option.grad_acc_num_micro_batches = pass_context::GetInt("auto_sharding::grad_acc_num_micro_batches", 1);
+      as_option.force_batch_dim_to_mesh_dim = pass_context::GetInt("auto_sharding::force_batch_dim_to_mesh_dim", -1);
+      as_option.force_simple_heuristic = pass_context::GetString("auto_sharding::force_simple_heuristic", "");
+      as_option.device_mesh_ids = pass_context::GetIntVector("auto_sharding::device_mesh_ids");
+      as_option.device_mesh_shape = pass_context::GetIntVector("auto_sharding::device_mesh_shape");
+      as_option.device_mesh_alpha = pass_context::GetDoubleVector("auto_sharding::device_mesh_alpha");
+      as_option.device_mesh_beta = pass_context::GetDoubleVector("auto_sharding::device_mesh_beta");
+      as_option.simplify_graph = pass_context::GetBool("auto_sharding::simplify_graph", true);
+      as_option.force_strategy = pass_context::GetBool("auto_sharding::force_strategy", false);
+      as_option.force_strategy_inst_indices = pass_context::GetIntVector("auto_sharding::force_strategy_inst_indices");
+      as_option.force_strategy_stra_names = pass_context::GetStringVector("auto_sharding::force_strategy_stra_names");
       spmd_pipeline.AddPass<AutoSharding>(as_option);
 
       // hhq
       // spmd_pipeline.AddPass<ShardingPropagation>(
       //     /*is_spmd=*/true, /*propagate_metadata=*/false,
-      //     /*allow_spmd_sharding_propagation_to_output=*/true);
-      spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true);
+      //     /*allow_spmd_sharding_propagation_to_output=*/{true});
+      spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true, /*propagate_metadata=*/false);
 
       spmd_pipeline.AddPass<SliceAutoShardedStages>();
     } else {
@@ -407,8 +427,9 @@ ENTRY %elementwise {
   xla::ExecutableBuildOptions build_options = xla::ExecutableBuildOptions();
   build_options.set_device_ordinal(0);
   build_options.set_num_replicas(1);
-  build_options.set_num_partitions(4);
+  build_options.set_num_partitions(2);
   build_options.set_use_spmd_partitioning(true);
+
   xla::CompileOptions options = {};
   options.compile_portable_executable = false;
   options.parameter_is_tupled_arguments = false;
@@ -422,7 +443,7 @@ ENTRY %elementwise {
   // for (xla::HloSharding x:hlo_module->spmd_parameters_shardings()) {
   //   std::cout << "spmd_parameters_shardings:" << x.ToString() << std::endl;
   // }
-  // std::cout << "spmd_output_sharding:" << hlo_module->spmd_output_sharding().ToString() << std::endl;
+  std::cout << "spmd_output_sharding:" << hlo_module->spmd_output_sharding().ToString() << std::endl;
 
   return 0;
 }

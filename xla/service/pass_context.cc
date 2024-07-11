@@ -23,10 +23,16 @@ void SetPassContext(nb::dict dict) {
     } else if (nb::isinstance<nb::float_>(item.second)) {
       obj = absl::any(nb::cast<double>(item.second));
     } else if (nb::isinstance<nb::str>(item.second)) {
-      obj = absl::any(nb::cast<std::string>(item.second));
+      nb::str x = nb::cast<nb::str>(item.second);
+      obj = absl::any(nb::cast<std::string>(x));
     } else if (nb::isinstance<nb::list>(item.second) ||
                nb::isinstance<nb::tuple>(item.second)) {
-      auto tuple_val = nb::cast<nb::tuple>(item.second);
+      // auto tuple_val = nb::cast<nb::tuple>(item.second);
+      nb::list tuple_val;
+      for (auto x : item.second) {
+        tuple_val.append(x);
+      }
+
       // Infer the type according to the first element of the tuple.
       if (tuple_val.size() > 0 && nb::isinstance<nb::int_>(tuple_val[0])) {
         std::vector<int64_t> int_vector;
@@ -47,7 +53,8 @@ void SetPassContext(nb::dict dict) {
         std::vector<std::string> str_vector;
         str_vector.reserve(tuple_val.size());
         for (size_t i = 0; i < tuple_val.size(); ++i) {
-          str_vector.push_back(nb::cast<std::string>(tuple_val[i]));
+          nb::str x = nb::cast<nb::str>(tuple_val[i]);
+          str_vector.push_back(nb::cast<std::string>(x));
         }
         obj = absl::any(std::move(str_vector));
       } else {

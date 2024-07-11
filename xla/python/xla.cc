@@ -115,6 +115,9 @@ limitations under the License.
 
 /*******added by mesha ********/
 #include "xla/hlo/experimental/auto_sharding/auto_sharding_runner.h"
+#include "xla/service/spmd/grad_acc_rewrite.h"
+#include "xla/service/pass_context.h"
+// #include "xla/service/gpu/gpu_cost_model.h"
 
 
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
@@ -162,7 +165,11 @@ bool IsSanitized() { return IsAsan() || IsMsan() || IsTsan(); }
 
 }  // namespace
 
+const std::string MODULE_VERSION = "0.0.5";
+
 NB_MODULE(xla_extension, m_nb) {
+  std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;
+
   // Initialize ABSL logging because code within XLA uses it.
 #ifndef PLATFORM_GOOGLE
   InitializeAbslLogging();
@@ -900,7 +907,10 @@ NB_MODULE(xla_extension, m_nb) {
            &jax::CheckAndCanonicalizeMemoryKind, nb::arg("memory_kind").none(),
            nb::arg("device_list"));
 
-  /*******************added by mesha**************/
+  /*******************added by mesha**************/    
+  m_nb.def("set_pass_context", &xla::pass_context::SetPassContext);
+  m_nb.def("clear_pass_context", &xla::pass_context::ClearPassContext);
+  // m_nb.def("estimate_hlo_module_cost", &xla::gpu::EstimateHloModuleCost);  
   m_nb.def("set_hlo_module_output_shardings", &xla::spmd::SetHloModuleOutputShardings);
   m_nb.def("set_hlo_module_input_shardings", &xla::spmd::SetHloModuleInputShardings);
 
@@ -908,7 +918,8 @@ NB_MODULE(xla_extension, m_nb) {
       "run_auto_sharding",
       [](HloModule* hlo_module, const CompileOptions& options) {
         TF_CHECK_OK(xla::spmd::RunAutoShardingPass(hlo_module, options));
-        return xla::OkStatus();
+        // return xla::OkStatus();
+        return true;
       },
       "Run auto sharding pass");
 
@@ -916,7 +927,8 @@ NB_MODULE(xla_extension, m_nb) {
       "run_spmd_partitioner",
       [](HloModule* hlo_module, const CompileOptions& options) {
         TF_CHECK_OK(xla::spmd::RunSpmdPartitionerPass(hlo_module, options));
-        return xla::OkStatus();
+        // return xla::OkStatus();
+        return true;
       },
       "Run spmd partitioner pass");
 
@@ -929,6 +941,8 @@ NB_MODULE(xla_extension, m_nb) {
         }
         return ret;
       });
+
+  m_nb.def("get_grad_sync_channel_ids", &xla::spmd::GetGradSyncChannelIds);
 
   /*******************end added by mesha**************/
 

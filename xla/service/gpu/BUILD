@@ -6224,3 +6224,22 @@ xla_cc_test(
         "@tsl//tsl/platform:statusor",
     ],
 )
+
+# hhq
+cc_library(
+    name = "gpu_cost_model",
+    srcs = [
+        "gpu_cost_model.cc",
+    ],
+    hdrs = [
+        "gpu_cost_model.h",
+    ],
+    deps = [
+        ":backend_configs_cc",
+        ":ir_emission_utils",
+        "//xla/hlo/ir:hlo",
+        "//xla/service:pass_context",
+        "//xla/hlo/experimental/auto_sharding:auto_sharding",
+        "@nanobind",
+    ],
+)

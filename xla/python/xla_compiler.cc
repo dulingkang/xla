@@ -683,7 +683,10 @@ void BuildXlaCompilerSubmodule(nb::module_& m) {
                        param_shardings.push_back(parameter_sharding.ToProto());
                      }
                      return param_shardings;
-                   });
+                   })
+      .def("set_spmd_output_sharding", &HloModule::set_spmd_output_sharding)
+      .def("set_spmd_parameters_shardings", &HloModule::set_spmd_parameters_shardings)
+      .def("infer_spmd_shardings", &HloModule::infer_spmd_shardings);               
 
   nb::class_<HloModuleGroup> hlo_module_group_class(m, "HloModuleGroup");
   hlo_module_group_class
