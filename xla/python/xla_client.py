@@ -29,7 +29,9 @@ from typing import Any, List, Mapping, Optional, Protocol, Sequence, Tuple, Unio
 import ml_dtypes
 import numpy as np
 
-from . import xla_extension as _xla
+# hhq
+# from . import xla_extension as _xla
+import xla_extension as _xla
 
 # Note this module does *not* depend on any Python protocol buffers. The XLA
 # Python bindings are currently packaged both as part of jaxlib and as part

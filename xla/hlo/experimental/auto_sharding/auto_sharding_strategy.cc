@@ -121,6 +121,7 @@ BuildStrategyAndCost(
     }
 
     HloOpcode opcode = ins->opcode();
+    std::cout << "hhq4: ins=" << ins->ToString() << std::endl;
 
     bool only_allow_divisible;
     if (IsEntryComputationInputOrOutput(module, ins)) {
@@ -581,7 +582,6 @@ BuildStrategyAndCost(
                                      strategy_map, ins, instruction_id,
                                      sequence, hlo_cost_analysis, cluster_env,
                                      batch_dim_map, option, call_graph));
-
         if (option.allow_recompute_heavy_op) {
           AddReplicatedStrategy(
               ins, ins->shape(), cluster_env, strategy_map, strategy_group,
@@ -595,6 +595,7 @@ BuildStrategyAndCost(
                                       strategy_map, ins, instruction_id,
                                       sequence, hlo_cost_analysis, cluster_env,
                                       batch_dim_map, option, call_graph));
+        std::cout << "hhq1: allow_recompute_heavy_op=" << option.allow_recompute_heavy_op << std::endl;
         if (option.allow_recompute_heavy_op) {
           AddReplicatedStrategy(
               ins, ins->shape(), cluster_env, strategy_map, strategy_group,

@@ -36,6 +36,22 @@ def inv_conv_compileoptions(compile_options: xle.CompileOptions) -> xe.CompileOp
   return xe.CompileOptions.ParseFromString(s)
 
 
+# def conv_client(client: xe.Client) -> xle.Client:
+#   """
+#   Convert xe client to xle client.
+#   """
+#   s = client.serialize_executable()
+#   return xle.Client.deserialize_executable(s)
+
+          
+# def inv_conv_client(client: xle.Client) -> xe.Client:
+#   """
+#   Convert xle client to xe client.
+#   """
+#   s = client.serialize_executable()
+#   return xe.Client.deserialize_executable(s)
+
+
 if __name__ == "__main__":
   # hlomodule
   hlo_text = """

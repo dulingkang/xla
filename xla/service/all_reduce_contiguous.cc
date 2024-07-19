@@ -32,7 +32,8 @@ namespace {
 absl::Status ReplaceWithContiguousAllReduce(
     HloAllReduceInstruction* all_reduce) {
   TF_RET_CHECK(all_reduce);
-  TF_RET_CHECK(!all_reduce->has_sharding());
+  // hhq
+  // TF_RET_CHECK(!all_reduce->has_sharding());
 
   HloComputation& computation = *all_reduce->parent();  // never null
   PrimitiveType element_type = all_reduce->operand(0)->shape().element_type();

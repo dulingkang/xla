@@ -2,6 +2,7 @@
 
 load(
     "//tsl/platform/default:build_config_root.bzl",
+    _if_dynamic_kernels = "if_dynamic_kernels",
     _if_llvm_aarch32_available = "if_llvm_aarch32_available",
     _if_llvm_aarch64_available = "if_llvm_aarch64_available",
     _if_llvm_arm_available = "if_llvm_arm_available",
@@ -20,6 +21,7 @@ load(
     _tf_gpu_tests_tags = "tf_gpu_tests_tags",
 )
 
+if_dynamic_kernels = _if_dynamic_kernels
 if_llvm_aarch32_available = _if_llvm_aarch32_available
 if_llvm_aarch64_available = _if_llvm_aarch64_available
 if_llvm_arm_available = _if_llvm_arm_available

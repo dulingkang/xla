@@ -291,6 +291,7 @@ cc_library(
     srcs = [
         "py_array.cc",
         "py_client.cc",
+        # "py_buffer.cc",  # hhq
         "py_compile_only_client.cc",
         "py_device.cc",
         "py_device_list.cc",
@@ -304,6 +305,7 @@ cc_library(
     hdrs = [
         "py_array.h",
         "py_client.h",
+        # "py_buffer.h",  # hhq
         "py_compile_only_client.h",
         "py_device.h",
         "py_device_list.h",
@@ -325,6 +327,7 @@ cc_library(
     ]),
     features = ["-use_header_modules"],
     deps = [
+        ":python_utils",
         ":callback",
         ":nb_absl_span",
         ":nb_class_ptr",
@@ -537,6 +540,7 @@ cc_library(
     features = ["-use_header_modules"],
     visibility = [":friends"],  # For the functions to access C++ flags/thread-local variables
     deps = [
+        ":python_utils",
         ":nb_helpers",
         ":py_client",
         ":python_ref_manager",
@@ -754,6 +758,7 @@ cc_library(
     features = ["-use_header_modules"],
     visibility = ["//visibility:private"],
     deps = [
+        ":python_utils",
         ":jax_jit",
         ":nb_class_ptr",
         ":nb_helpers",
@@ -1352,6 +1357,7 @@ tsl_pybind_extension(
         "//xla/service/spmd:grad_acc_rewrite",  # hhq
         "//xla/service:pass_context",  # hhq
         # "//xla/service/gpu:gpu_cost_model",  # hhq
+	      # "//xla/service/gpu:alpa_nccl_wrapper",  # hhq
         "//xla/tsl/concurrency:ref_count",
         "//xla/tsl/distributed_runtime/preemption:preemption_sync_manager",
         "//xla/tsl/python/lib/core:numpy",
@@ -1507,6 +1513,23 @@ cc_library(
     features = ["-use_header_modules"],
     deps = [
         "@com_google_absl//absl/container:flat_hash_set",
+        "@nanobind",
+    ],
+)
+
+# hhq
+cc_library(
+    name = "python_utils",
+    hdrs = ["python_utils.h"],
+    copts = [
+        "-fexceptions",
+        "-fno-strict-aliasing",
+    ],
+    features = ["-use_header_modules"],
+    deps = [
+        "//xla:status_macros",
+        "//xla:util",
+        "//third_party/python_runtime:headers",  # buildcleaner: keep
         "@nanobind",
     ],
 )

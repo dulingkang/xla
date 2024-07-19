@@ -70,7 +70,6 @@ limitations under the License.
 
 namespace xla {
 
-// namespace {
 // Adds the HloVerifier for GPU to the given pipeline.
 void AddHloVerifier(HloPassPipeline* pipeline, HloVerifierOpts&& opts = {},
                     bool debug_only = false) {
@@ -88,7 +87,6 @@ void AddHloVerifier(HloPassPipeline* pipeline, HloVerifierOpts&& opts = {},
 bool ConvIsLowerable(HloInstruction* conv) {
   return gpu::GpuConvRewriter::ConvIsLowerable(conv);
 }
-// }  // namespace
 
 namespace spmd {
 // namespace {
@@ -181,10 +179,8 @@ Status RunAutoShardingPass(HloModule* hlo_module,
   // TODO(yonghao): TF Profiler Traceme
   const DebugOptions& debug_options = hlo_module->config().debug_options();
 
-  // hhq
-  // AlgebraicSimplifierOptions layout_insensitive_algsimp_opts({},
-  //                                                            ConvIsLowerable);
-  AlgebraicSimplifierOptions layout_insensitive_algsimp_opts({});
+  AlgebraicSimplifierOptions layout_insensitive_algsimp_opts({},
+                                                             ConvIsLowerable);
 
   // "slow" minmax means we propagate nan.
   layout_insensitive_algsimp_opts.set_minmax_propagate_nan(
@@ -298,7 +294,7 @@ Status RunSpmdPartitionerPass(HloModule* hlo_module,
       //     /*is_spmd=*/true, /*propagate_metadata=*/false,
       //     /*allow_spmd_sharding_propagation_to_output=*/true);
       spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true);
-
+      
       spmd_pipeline.AddPass<StatefulRngSpmdPartitioner>(
           num_partitions, hlo_module->config().replica_count());
       spmd_pipeline.AddPass<RedundantSliceEliminator>();

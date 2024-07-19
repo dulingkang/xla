@@ -45,6 +45,11 @@ class NcclAllReduceReduceScatterThunkBase : public NcclCollectiveThunk {
                                       std::vector<Buffer> buffers,
                                       bool is_sync);
 
+  // hhq
+  // void set_module_name(const std::string& module_name) {
+  //   skip_env_name_ = module_name + "XLA_SKIP_NCCL_COLLECTIVE_IDS";
+  // }
+
   const NcclCollectiveConfig& config() const override { return config_.config; }
   ReductionKind reduction_kind() const { return config_.reduction_kind; }
 
@@ -53,6 +58,7 @@ class NcclAllReduceReduceScatterThunkBase : public NcclCollectiveThunk {
  protected:
   const NcclAllReduceConfig config_;
   const std::vector<Buffer> buffers_;
+  // std::string skip_env_name_ = "";  // hhq
 };
 
 // -----------------------------------------------------------------------------

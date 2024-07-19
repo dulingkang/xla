@@ -14,11 +14,11 @@ limitations under the License.
 ==============================================================================*/
 
 // This file implements nccl apis for alpa to use.
-#include "tensorflow/compiler/xla/service/gpu/alpa_nccl_group_base.h"
+#include "xla/service/gpu/alpa_nccl_group_base.h"
 
 #ifdef XLA_ENABLE_XCCL
-#include "tensorflow/compiler/xla/service/gpu/alpa_events.h"
-#include "tensorflow/compiler/xla/stream_executor/gpu/gpu_stream.h"
+// #include "xla/service/gpu/alpa_events.h"
+#include "xla/stream_executor/gpu/gpu_stream.h"
 #include "third_party/gpus/cuda/include/cuda.h"
 #endif
 

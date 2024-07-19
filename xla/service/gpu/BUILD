@@ -42,6 +42,13 @@ load(
     "tsl_gpu_library",
 )
 load("//xla/tsl:tsl.default.bzl", "filegroup", "get_compatible_with_portable")
+# hhq
+# load(
+#     "//tensorflow:tensorflow.bzl",
+#     "tf_cc_test",
+#     "tf_cuda_library",
+# )
+# load("//tensorflow:tensorflow.default.bzl", "get_compatible_with_cloud", "if_nccl")
 
 package(
     # copybara:uncomment default_applicable_licenses = ["//tensorflow:license"],
@@ -6226,20 +6233,65 @@ xla_cc_test(
 )
 
 # hhq
+# cc_library(
+#     name = "gpu_cost_model",
+#     srcs = [
+#         "gpu_cost_model.cc",
+#     ],
+#     hdrs = [
+#         "gpu_cost_model.h",
+#     ],
+#     deps = [
+#         ":backend_configs_cc",
+#         ":ir_emission_utils",
+#         "//xla/hlo/ir:hlo",
+#         "//xla/service:pass_context",
+#         "//xla/hlo/experimental/auto_sharding:auto_sharding",
+#         "@nanobind",
+#     ],
+# )
+
+# alias(
+#     name = "alpa_nccl_group_base",
+#     actual = if_nccl(":_alpa_nccl_group_base", ":empty"),
+# )
+
+# tf_cuda_library(
+#     name = "_alpa_nccl_group_base",
+#     srcs = if_gpu_is_configured(["alpa_nccl_group_base.cc"]),
+#     hdrs = if_gpu_is_configured(["alpa_nccl_group_base.h"]),
+#     # Override tf_cuda_library()'s internal default value of ["//buildenv/target:gce"].
+#     copts = [
+#         "-fexceptions",
+#         # "-fno-strict-aliasing",
+#     ],
+#     compatible_with = [],
+#     defines = if_gpu_is_configured(["XLA_ENABLE_XCCL"]),
+#     deps = [
+#         ":alpa_event_manager",
+#         "//xla/pjrt:pjrt_stream_executor_client",
+#     ] + if_gpu_is_configured([
+#         ":gpu_executable_run_options",
+#         # ":nccl_utils",
+#         "//xla/stream_executor/gpu:gpu_stream",
+#     ]) + if_cuda_is_configured([
+#         "@local_config_nccl//:nccl",
+#     ]) + if_rocm_is_configured([
+#         "@local_config_rocm//rocm:rccl",
+#     ]),
+# )
+
 cc_library(
-    name = "gpu_cost_model",
+    name = "alpa_nccl_wrapper",
     srcs = [
-        "gpu_cost_model.cc",
+        "alpa_nccl_wrapper.cc",
     ],
     hdrs = [
-        "gpu_cost_model.h",
+        "alpa_nccl_wrapper.h",
     ],
+    defines = if_gpu_is_configured(["XLA_ENABLE_XCCL"]),
     deps = [
-        ":backend_configs_cc",
-        ":ir_emission_utils",
-        "//xla/hlo/ir:hlo",
-        "//xla/service:pass_context",
-        "//xla/hlo/experimental/auto_sharding:auto_sharding",
-        "@nanobind",
+        "alpa_nccl_group_base",
+        "//xla/python:py_client",
     ],
 )

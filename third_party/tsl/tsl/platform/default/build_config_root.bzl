@@ -11,6 +11,12 @@ GPU_TEST_PROPERTIES = {
     "Pool": "gpu-pool",
 }
 
+def if_dynamic_kernels(extra_deps, otherwise = []):
+    return select({
+        str(Label("//xla/tensorflow:dynamic_loaded_kernels")): extra_deps,
+        "//conditions:default": otherwise,
+    })
+
 def tf_gpu_tests_tags():
     return ["requires-gpu-nvidia", "gpu"] + gpu_test_tags()
 

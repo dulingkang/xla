@@ -19,7 +19,10 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set, 
 
 import numpy
 
-from . import xla_extension as _xla
+# hhq
+# from . import xla_extension as _xla
+import xla_extension as _xla
+
 from .xla_extension import Shape as Shape
 from .xla_extension import Layout as Layout
 from .xla_extension import ifrt_programs as ifrt_programs

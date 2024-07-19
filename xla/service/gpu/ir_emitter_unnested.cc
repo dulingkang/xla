@@ -2269,6 +2269,7 @@ absl::Status IrEmitterUnnested::EmitNcclThunk(
     auto thunk = std::make_unique<NcclThunkType>(
         Thunk::ThunkInfo::WithProfileAnnotation(inst), NcclApi::Default(), inst,
         /*buffers=*/std::move(buffers));
+
     GetCollectivesAsyncEvents().insert({async_start, thunk->async_events()});
     AddThunkToThunkSequence(std::move(thunk));
     return absl::OkStatus();

@@ -276,6 +276,7 @@ cc_library(
         "//xla/service:call_graph",
         "//xla/service:sharding_propagation",
         "//xla/service:while_loop_analysis",
+        "//xla/service:hlo_creation_utils",  # hhq
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_map",

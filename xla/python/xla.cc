@@ -118,7 +118,12 @@ limitations under the License.
 #include "xla/service/spmd/grad_acc_rewrite.h"
 #include "xla/service/pass_context.h"
 // #include "xla/service/gpu/gpu_cost_model.h"
+#ifdef XLA_PYTHON_ENABLE_GPU
+// #include "xla/service/gpu/alpa_events.h"
+// #include "xla/service/gpu/alpa_nccl_wrapper.h"
 
+// PYBIND11_MAKE_OPAQUE(std::vector<ncclComm_t>);  // todo: hhq. nanobind没有对应的函数
+#endif // XLA_PYTHON_ENABLE_GPU
 
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
 
@@ -165,7 +170,7 @@ bool IsSanitized() { return IsAsan() || IsMsan() || IsTsan(); }
 
 }  // namespace
 
-const std::string MODULE_VERSION = "0.0.5";
+const std::string MODULE_VERSION = "0.0.24";
 
 NB_MODULE(xla_extension, m_nb) {
   std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;
@@ -943,6 +948,43 @@ NB_MODULE(xla_extension, m_nb) {
       });
 
   m_nb.def("get_grad_sync_channel_ids", &xla::spmd::GetGradSyncChannelIds);
+
+  // #ifdef XLA_PYTHON_ENABLE_GPU
+  //   nb::class_<gpu::alpa::PyCommGroup>  // , std::shared_ptr<gpu::alpa::PyCommGroup>
+  //       alpa_comm_group(m_nb, "CommGroup");
+  //   alpa_comm_group
+  //       .def("__init__", [](gpu::alpa::PyCommGroup* self, std::shared_ptr<PyClient> backend) {
+  //           new (self) gpu::alpa::PyCommGroup(backend);
+  //       })
+  //       .def("record_events", &gpu::alpa::PyCommGroup::CommunicatorRecordEvents)
+  //       .def("wait_events", &gpu::alpa::PyCommGroup::CommunicatorWaitEvents)
+  //       .def("comm_wait_compute", &gpu::alpa::PyCommGroup::CommWaitCompute)
+  //       .def("compute_wait_comm", &gpu::alpa::PyCommGroup::ComputeWaitComm)
+  //       .def("nccl_create_communicators",
+  //           &gpu::alpa::PyCommGroup::NcclCreateCommunicators,
+  //           "create nccl communicators for cross-mesh communication")
+  //       .def("nccl_destroy_comms", &gpu::alpa::PyCommGroup::NcclDestroyComms,
+  //           "destroy comms")
+  //       .def("nccl_local_all_gather", &gpu::alpa::PyCommGroup::NcclLocalAllGather,
+  //           "nccl local allgather")
+  //       .def("nccl_broadcast_partial_gpus",
+  //           &gpu::alpa::PyCommGroup::NcclBroadcastPartialGPUs,
+  //           "nccl broadcast with only a subset of gpus in the host are involved")
+  //       .def("nccl_recv", &gpu::alpa::PyCommGroup::NcclRecv, "nccl recv data")
+  //       .def("nccl_send", &gpu::alpa::PyCommGroup::NcclSend, "nccl send data");
+  //   m_nb.def("set_num_device_on_host", &gpu::SetNumDeviceOnHost);
+  //   m_nb.def("set_idx_to_uuid", &gpu::XlaSetIdxToUuid);
+  //   m_nb.def("computation_wait_events", &gpu::alpa::ComputationWaitEvents);
+  //   m_nb.def("set_comm_group_info", &gpu::alpa::SetPyCommGroup,
+  //            "set the mapping from meshes to the corresponding communication group "
+  //            "and nccl uuid");
+  //   m_nb.def("reset_event_context", &gpu::alpa::ResetEventContext);
+  //   m_nb.def("get_buffer_device_id", &gpu::alpa::GetBufferDeviceId,
+  //            "get the local device id for one pybuffer");
+  //   m_nb.def("nccl_get_unique_id", &gpu::alpa::NcclGetUniqueId,
+  //            "get unique nccl id");
+  //   m_nb.def("nccl_get_version", &gpu::alpa::NcclGetVersion, "get nccl version");
+  // #endif // XLA_PYTHON_ENABLE_GPU
 
   /*******************end added by mesha**************/
 

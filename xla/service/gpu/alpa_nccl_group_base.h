@@ -25,8 +25,8 @@ limitations under the License.
 #endif
 
 #include "xla/pjrt/pjrt_stream_executor_client.h"
-#include "tensorflow/compiler/xla/service/gpu/nccl_utils.h"
-#include "tensorflow/compiler/xla/service/rendezvous.h"
+// #include "xla/service/gpu/nccl_utils.h"
+#include "xla/service/rendezvous.h"
 
 namespace xla {
 namespace gpu {

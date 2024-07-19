@@ -3900,6 +3900,10 @@ absl::StatusOr<AutoShardingResult> AutoShardingImplementation::RunAutoSharding(
                "custom_call_target=Sharding.";
   }
 
+  // hhq
+  // ----- Pre-process to normalize the dot dimensions -----
+  TF_ASSIGN_OR_RETURN(bool normalize_dot_dimension_changed, spmd::NormalizeDotDimension(module));
+
   // ----- Get a sequential schedule and do liveness analysis -----
   auto size_fn = [](const BufferValue& buffer) {
     return spmd::GetBytes(buffer.shape());
