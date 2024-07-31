@@ -772,7 +772,6 @@ void DotHandler::RecomputeSplitBothContract() {
                 compute_cost, communication_cost_fn);
   };
   Enumerate(func, lhs_con_dims_.size(), 1);
-  std::cout << "hhq3" << std::endl;
 }
 
 void DotHandler::Add1DDataParallel() {

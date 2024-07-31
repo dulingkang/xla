@@ -140,6 +140,25 @@ struct ShardingStrategy {
   }
 };
 
+// hhq
+// The strategy for each instruction.
+// We use unique_ptr for ownership, and raw pointers for other references.
+struct StrategyVector {
+  bool is_tuple;
+  // the index used in the solver. For non-leaf nodes, this is set to -1.
+  int64_t id;
+  // the index of the HLO instruction that generates this strategy vector.
+  size_t instruction_id;
+  // the connected nodes used for resharding costs;
+  std::vector<const StrategyVector*> in_nodes;
+  // the followed strategy. Used for merging nodes.
+  const StrategyVector* following = nullptr;
+  // Used when is_tuple == False. Leaf strategy vector.
+  std::vector<ShardingStrategy> leaf_vector;
+  // Used when is_tuple == True. A list of strategy vectors of child nodes.
+  std::vector<std::unique_ptr<StrategyVector>> childs;
+};
+
 using NodeIdx = int64_t;          // An index into the solver's node list.
 using EdgeIdx = int64_t;          // An index into the solver's edge list.
 using NodeStrategyIdx = int64_t;  // An index into a node's strategy vector.

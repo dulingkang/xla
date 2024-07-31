@@ -121,7 +121,6 @@ BuildStrategyAndCost(
     }
 
     HloOpcode opcode = ins->opcode();
-    std::cout << "hhq4: ins=" << ins->ToString() << std::endl;
 
     bool only_allow_divisible;
     if (IsEntryComputationInputOrOutput(module, ins)) {

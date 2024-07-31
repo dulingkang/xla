@@ -1330,6 +1330,7 @@ tsl_pybind_extension(
         "//xla:util",
         "//xla/ffi:ffi_api",
         "//xla/hlo/experimental/auto_sharding:auto_sharding_runner",  # hhq
+        # "//xla/service/spmd:alpa_compiler",  # hhq
         "//xla/pjrt:exceptions",
         "//xla/pjrt:mlir_to_hlo",
         "//xla/pjrt:pjrt_api",

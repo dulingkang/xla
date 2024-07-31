@@ -1,75 +1,50 @@
-/* Copyright 2022 The OpenXLA Authors.
+#include "xla/service/spmd/alpa_compiler.h"
+#include "xla/service/spmd/auto_sharding.h"
+#include "xla/service/spmd/auto_sharding_util.h"
+#include "xla/service/spmd/grad_acc_rewrite.h"
+#include "xla/service/spmd/redundant_slice_eliminator.h"
+#include "xla/service/spmd/slice_auto_sharded_stages.h"
+#include "xla/service/spmd/stateful_rng_spmd_partitioner.h"
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
-#include <iostream>
-#include <ostream>
-#include <string>
-
-#include "absl/status/status.h"
-#include "xla/hlo/experimental/auto_sharding/auto_sharding.h"
-#include "xla/hlo/ir/hlo_module.h"
-#include "xla/service/hlo_parser.h"
-#include "xla/status.h"
-#include "xla/tools/hlo_module_loader.h"
-#include "tsl/platform/init_main.h"
-
-// add by mesha
-#include "xla/hlo/experimental/auto_sharding/slice_auto_sharded_stages.h"
-#include "xla/hlo/experimental/auto_sharding/auto_sharding_util.h"
-#include "xla/service/sharding_remover.h"
-#include "xla/service/hlo_dce.h"
-#include "xla/service/hlo_pass_pipeline.h"
-#include "xla/service/compiler.h"
+// Copied from gpu_compiler.cc
+#include "xla/hlo/transforms/hlo_constant_splitter.h"
+#include "xla/hlo/ir/hlo_sharding_metadata.h"
 #include "xla/service/algebraic_simplifier.h"
+#include "xla/service/all_reduce_reassociate.h"
 #include "xla/service/call_inliner.h"
-#include "xla/service/gpu/gpu_conv_rewriter.h"
-#include "xla/service/gpu/gpu_compiler.h"
-#include "xla/service/gpu/matmul_utils.h"
-#include "xla/service/hlo_pass_fix.h"
-#include "xla/service/sort_simplifier.h"
-#include "xla/service/dump.h"
-#include "xla/service/dot_decomposer.h"
-#include "xla/service/zero_sized_hlo_elimination.h"
 #include "xla/service/conditional_canonicalizer.h"
-#include "xla/service/tuple_simplifier.h"
-#include "xla/service/scatter_expander.h"
+#include "xla/service/conditional_simplifier.h"
+#include "xla/service/dot_decomposer.h"
+#include "xla/service/dot_merger.h"
+#include "xla/service/dump.h"
 #include "xla/service/gather_expander.h"
-#include "xla/service/hlo_cse.h"
-#include "xla/service/sharding_propagation.h"
-#include "xla/service/hlo_verifier.h"
+#include "xla/service/gather_simplifier.h"
+#include "xla/service/gpu/matmul_utils.h"
+#include "xla/service/gpu/gpu_conv_rewriter.h"
 #include "xla/service/cpu_gpu_shape_verifier.h"
+#include "xla/service/hlo_constant_folding.h"
+#include "xla/service/hlo_cse.h"
+#include "xla/service/hlo_dce.h"
+#include "xla/service/hlo_pass_fix.h"
+#include "xla/service/hlo_pass_pipeline.h"
+#include "xla/service/hlo_verifier.h"
+#include "xla/service/reshape_mover.h"
+#include "xla/service/scatter_expander.h"
+#include "xla/service/scatter_simplifier.h"
+#include "xla/service/sharding_propagation.h"
+#include "xla/service/sharding_remover.h"
+#include "xla/service/sort_simplifier.h"
+#include "xla/service/transpose_folding.h"
+#include "xla/service/tuple_simplifier.h"
 #include "xla/service/while_loop_constant_sinking.h"
 #include "xla/service/while_loop_simplifier.h"
-#include "xla/service/reshape_mover.h"
-#include "xla/service/hlo_constant_folding.h"
-#include "xla/service/conditional_simplifier.h"
-#include "xla/service/transpose_folding.h"
-#include "xla/service/all_reduce_reassociate.h"
-#include "xla/service/hlo_cost_analysis.h"
-#include "xla/service/spmd/stateful_rng_spmd_partitioner.h"
-#include "xla/service/spmd/redundant_slice_eliminator.h"
-#include "xla/service/spmd/grad_acc_rewrite.h"
-#include "xla/service/pass_context.h"
-
-#include "xla/client/executable_build_options.h"
-#include "xla/hlo/transforms/hlo_constant_splitter.h"
-#include "xla/pjrt/pjrt_executable.h"
+#include "xla/service/zero_sized_hlo_elimination.h"
+#include "xla/tools/hlo_module_loader.h"
 
 
 namespace xla {
 
+namespace {
 // Adds the HloVerifier for GPU to the given pipeline.
 void AddHloVerifier(HloPassPipeline* pipeline, HloVerifierOpts&& opts = {},
                     bool debug_only = false) {
@@ -87,31 +62,12 @@ void AddHloVerifier(HloPassPipeline* pipeline, HloVerifierOpts&& opts = {},
 bool ConvIsLowerable(HloInstruction* conv) {
   return gpu::GpuConvRewriter::ConvIsLowerable(conv);
 }
+}  // namespace
 
 namespace spmd {
-// namespace {
 
 const char kBeforeAutoShardingDumpName[] = "before_run_auto_sharding";
 const char kBeforeSpmdPartitionDumpName[] = "before_run_spmd_partitioner";
-
-absl::Status RunAutoShardingPassFromFile(const std::string& file_name) {
-  std::string hlo_text;
-  TF_RETURN_IF_ERROR(
-      tsl::ReadFileToString(tsl::Env::Default(), file_name, &hlo_text));
-  TF_ASSIGN_OR_RETURN(std::unique_ptr<HloModule> hlo_module,
-                      LoadModuleFromData(/*data=*/hlo_text, /*format=*/"hlo"));
-
-  AutoShardingOption option;
-  option.enable = true;
-  option.device_mesh_shape = {2, 2};
-  option.device_mesh_ids = {0, 1, 2, 3};
-  option.device_mesh_alpha = {1.0, 1.0};
-  option.device_mesh_beta = {0.01, 1.0};
-  TF_ASSIGN_OR_RETURN(bool changed, AutoSharding(option).Run(hlo_module.get()));
-  CHECK(changed);
-  std::cout << hlo_module->ToString() << std::endl;
-  return absl::OkStatus();
-}
 
 // TODO(yonghao): Check correctness of compile options and modules
 Status PreCompileCheck(const CompileOptions& options) {
@@ -142,7 +98,6 @@ Status PreCompileCheck(const CompileOptions& options) {
   return OkStatus();
 }
 
-
 StatusOr<HloModuleConfig> CreateHloModuleConfig(const HloModule* hlo_module,
                                                 const CompileOptions options) {
   TF_RETURN_IF_ERROR(PreCompileCheck(options));
@@ -168,7 +123,6 @@ StatusOr<HloModuleConfig> CreateHloModuleConfig(const HloModule* hlo_module,
   return module_config;
 }
 
-
 Status RunAutoShardingPass(HloModule* hlo_module,
                            const CompileOptions& options) {
   TF_ASSIGN_OR_RETURN(auto module_config,
@@ -181,7 +135,6 @@ Status RunAutoShardingPass(HloModule* hlo_module,
 
   AlgebraicSimplifierOptions layout_insensitive_algsimp_opts({},
                                                              ConvIsLowerable);
-
   // "slow" minmax means we propagate nan.
   layout_insensitive_algsimp_opts.set_minmax_propagate_nan(
       !debug_options.xla_gpu_enable_fast_min_max());
@@ -224,44 +177,17 @@ Status RunAutoShardingPass(HloModule* hlo_module,
       spmd_simplify.AddPass<HloCSE>(
           /*is_layout_sensitive=*/false);  // Added by Alpa
       spmd_simplify.AddPass<HloDCE>();
-
       spmd_pipeline.AddPass<HloConstantSplitter>();
-
-      // hhq
-      // spmd_pipeline.AddPass<AutoSharding>();
-      AutoShardingOption as_option;
-      as_option.enable = pass_context::GetBool("auto_sharding::enable", true);
-      as_option.memory_budget_per_device = pass_context::GetInt("auto_sharding::memory_budget_per_device", -1);
-      as_option.force_override_all_gather_cost = pass_context::GetBool("auto_sharding::force_all_gather_cost", false);
-      as_option.all_gather_cost = pass_context::GetDouble("auto_sharding::all_gather_cost");
-      as_option.force_override_all_to_all_cost = pass_context::GetBool("auto_sharding::force_all_to_all_cost", false);
-      as_option.all_to_all_cost = pass_context::GetDouble("auto_sharding::all_to_all_cost");
-      as_option.allow_replicated_parameters = pass_context::GetBool("auto_sharding::allow_replicated_parameters", true);
-      as_option.prefer_reduce_scatter = pass_context::GetBool("auto_sharding::prefer_reduce_scatter", false);
-      as_option.reduce_scatter_grad_acc_friendly = pass_context::GetBool("auto_sharding::reduce_scatter_grad_acc_friendly", false);
-      as_option.reduce_scatter_aggressive_partition = pass_context::GetBool("auto_sharding::reduce_scatter_aggressive_partition", false);
-      as_option.batch_matmul_always_split_batch = pass_context::GetBool("auto_sharding::batch_matmul_always_split_batch", false);
-      as_option.allow_recompute_heavy_op = pass_context::GetBool("auto_sharding::allow_recompute_heavy_op", true);
-      as_option.allow_mixed_mesh_shape = pass_context::GetBool("auto_sharding::allow_mixed_mesh_shape", false);
-      as_option.grad_acc_num_micro_batches = pass_context::GetInt("auto_sharding::grad_acc_num_micro_batches", 1);
-      as_option.force_batch_dim_to_mesh_dim = pass_context::GetInt("auto_sharding::force_batch_dim_to_mesh_dim", -1);
-      as_option.force_simple_heuristic = pass_context::GetString("auto_sharding::force_simple_heuristic", "");
-      as_option.device_mesh_ids = pass_context::GetIntVector("auto_sharding::device_mesh_ids");
-      as_option.device_mesh_shape = pass_context::GetIntVector("auto_sharding::device_mesh_shape");
-      as_option.device_mesh_alpha = pass_context::GetDoubleVector("auto_sharding::device_mesh_alpha");
-      as_option.device_mesh_beta = pass_context::GetDoubleVector("auto_sharding::device_mesh_beta");
-      as_option.simplify_graph = pass_context::GetBool("auto_sharding::simplify_graph", true);
-      as_option.force_strategy = pass_context::GetBool("auto_sharding::force_strategy", false);
-      as_option.force_strategy_inst_indices = pass_context::GetIntVector("auto_sharding::force_strategy_inst_indices");
-      as_option.force_strategy_stra_names = pass_context::GetStringVector("auto_sharding::force_strategy_stra_names");
-      spmd_pipeline.AddPass<AutoSharding>(as_option);
+      spmd_pipeline.AddPass<AutoSharding>();
 
       // hhq
       // spmd_pipeline.AddPass<ShardingPropagation>(
       //     /*is_spmd=*/true, /*propagate_metadata=*/false,
-      //     /*allow_spmd_sharding_propagation_to_output=*/{true});
+      //     /*allow_spmd_sharding_propagation_to_output=*/true);
       spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true, /*propagate_metadata=*/false,
-        /*allow_spmd_sharding_propagation_to_output=*/absl::Span<const bool>{true});
+                                                 /*allow_spmd_sharding_propagation_to_output=*/absl::Span<const bool>{true});
+
+      std::cout << "hhq5" << std::endl;
 
       spmd_pipeline.AddPass<SliceAutoShardedStages>();
     } else {
@@ -295,13 +221,12 @@ Status RunSpmdPartitionerPass(HloModule* hlo_module,
       //     /*is_spmd=*/true, /*propagate_metadata=*/false,
       //     /*allow_spmd_sharding_propagation_to_output=*/true);
       spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true, /*propagate_metadata=*/false,
-        /*allow_spmd_sharding_propagation_to_output=*/absl::Span<const bool>{true});
-
+                                                 /*allow_spmd_sharding_propagation_to_output=*/absl::Span<const bool>{true});
       spmd_pipeline.AddPass<StatefulRngSpmdPartitioner>(
           num_partitions, hlo_module->config().replica_count());
       spmd_pipeline.AddPass<RedundantSliceEliminator>();
       spmd_pipeline.AddPass<AllReduceReassociate>();
-      spmd_pipeline.AddPass<GradAccRewrite>();  // should be used together with XLA_SKIP_NCCL_COLLECTIVE_IDS
+      spmd_pipeline.AddPass<GradAccRewrite>();
     } else {
       // Remove redundant sharding ops when partition_count == 1.
       spmd_pipeline.AddPass<ShardingRemover>();
@@ -310,7 +235,6 @@ Status RunSpmdPartitionerPass(HloModule* hlo_module,
     TF_RETURN_IF_ERROR(spmd_pipeline.Run(hlo_module).status());
   }
   std::cout << hlo_module->ToString() << std::endl;
-
   return OkStatus();
 }
 
@@ -361,8 +285,10 @@ Status SetHloModuleInputShardings(HloModule* module,
   TF_RETURN_IF_ERROR(pipeline.Run(module).status());
 
   HloComputation* entry = module->entry_computation();
+  // hhq
   // std::vector<HloInstruction*> input_insts = entry->parameter_instructions();
   HloInstruction::InstructionVector input_insts = entry->parameter_instructions();
+
   CHECK_EQ(input_insts.size(), op_shardings.size());
 
   size_t i = 0;
@@ -378,9 +304,9 @@ Status SetHloModuleInputShardings(HloModule* module,
   return OkStatus();
 }
 
-// }  // namespace
-}  // namespace spmd
-}  // namespace xla
+};  // namespace spmd
+};  // namespace xla
+
 
 int main(int argc, char** argv) {
 //   const std::string& hlo_text = R"(I0521 12:04:45.883483    1509 service.cc:186] HloModule test_log_stripping
@@ -408,10 +334,6 @@ ENTRY %elementwise {
   ROOT root = f32[16,32,64]{2,1,0} add(%param0, %param1)
 })";
 
-  tsl::port::InitMain("Run AutoSharding Pass", &argc, &argv);
-  QCHECK(argc == 2) << "Must specify a single input file";
-  TF_CHECK_OK(xla::spmd::RunAutoShardingPassFromFile(argv[1]));
-
   std::cout << "Test RunAutoShardingPass...\n" << std::endl;
   absl::StatusOr<std::unique_ptr<xla::HloModule>> hlo_module_ptr = xla::LoadModuleFromData(/*data=*/hlo_text, /*format=*/"hlo");
   xla::HloModule* hlo_module;
@@ -438,49 +360,8 @@ ENTRY %elementwise {
 
   std::cout << "Test RunSpmdPartitionerPass...\n" << std::endl;
   TF_CHECK_OK(xla::spmd::RunSpmdPartitionerPass(hlo_module, options));
-  // for (xla::HloSharding x:hlo_module->spmd_parameters_shardings()) {
-  //   std::cout << "spmd_parameters_shardings:" << x.ToString() << std::endl;
-  // }
+
   std::cout << "spmd_output_sharding:" << hlo_module->spmd_output_sharding().ToString() << std::endl;
-  
-  // Test pyclient::compile
-  std::cout << "Test pyclient::compile...\n" << std::endl;
-
-  std::unique_ptr<ifrt::PjRtClient> ifrt_client;
-  {
-    nb::gil_scoped_release gil_release;
-    std::shared_ptr<KeyValueStoreInterface> kv_store = nullptr;
-    if (distributed_client != nullptr) {
-      kv_store = GetDistributedKeyValueStore(distributed_client,
-                                              /*key_prefix=*/"gpu:");
-    }
-    GpuClientOptions options;
-    options.allocator_config = GpuAllocatorConfig();
-    options.node_id = 0;
-    options.num_nodes = 1;
-    options.allowed_devices = std::nullopt;
-    options.platform_name = std::nullopt;
-    options.kv_store = kv_store;
-    options.enable_mock_nccl = false;
-    std::unique_ptr<PjRtClient> pjrt_client =
-        xla::ValueOrThrow(GetStreamExecutorGpuClient(options));
-    ifrt_client = ifrt::PjRtClient::Create(std::move(pjrt_client));
-  }
-  nb_class_ptr<PyClient> backend = PyClient::Make(std::move(ifrt_client));
-
-  PyClient::Compile(
-    std::move(backend), std::move(mlir_module), std::move(options),
-    std::move(host_callbacks));
 
   return 0;
 }
-
-
-// PyClient::Compile(
-//               std::move(client),
-//               std::string(mlir_module.c_str(), mlir_module.size()),
-//               std::move(options), std::move(host_callbacks))
-
-// PyClient::Compile(
-//   std::move(client), std::move(mlir_module), std::move(options),
-//   std::move(host_callbacks))

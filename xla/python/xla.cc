@@ -115,6 +115,7 @@ limitations under the License.
 
 /*******added by mesha ********/
 #include "xla/hlo/experimental/auto_sharding/auto_sharding_runner.h"
+// #include "xla/service/spmd/alpa_compiler.h"
 #include "xla/service/spmd/grad_acc_rewrite.h"
 #include "xla/service/pass_context.h"
 // #include "xla/service/gpu/gpu_cost_model.h"
@@ -170,7 +171,7 @@ bool IsSanitized() { return IsAsan() || IsMsan() || IsTsan(); }
 
 }  // namespace
 
-const std::string MODULE_VERSION = "0.0.24";
+const std::string MODULE_VERSION = "0.0.33";
 
 NB_MODULE(xla_extension, m_nb) {
   std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;

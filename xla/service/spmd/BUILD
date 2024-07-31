@@ -1,7 +1,8 @@
 # Description: SPMD partitioning pass.
 
 load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")
-load("//xla:xla.bzl", "xla_cc_test")
+load("//xla:xla.bzl", "xla_cc_test", "xla_cc_binary")
+# load("//xla/tsl:tsl.default.bzl", "get_compatible_with_libtpu_portable")
 
 package(
     # copybara:uncomment default_applicable_licenses = ["//tensorflow:license"],
@@ -371,4 +372,101 @@ xla_cc_test(
         "//xla/hlo/ir:tile_assignment",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+# hhq
+cc_library(
+    name = "auto_sharding",
+    srcs = ["auto_sharding.cc", "auto_sharding_util.cc", "auto_sharding_dot_handler.cc"],
+    hdrs = ["auto_sharding.h", "auto_sharding_strategy.h", "auto_sharding_util.h"],
+    deps = [
+        "//xla:shape_util",
+        "//xla/service:dump",
+        # "//xla/service:hlo",
+        "//xla/service:hlo_creation_utils",
+        # "//xla/service:hlo_live_range",
+        "//xla/service:hlo_memory_scheduler",
+        "//xla/service:hlo_pass",
+        # "//xla/service:hlo_sharding_util",
+        "//xla/service:pass_context",
+        "//xla/service/heap_simulator:heap_simulator",
+        "//xla/hlo/utils:hlo_sharding_util",
+        "@pybind11",
+    ],
+)
+
+cc_library(
+    name = "slice_auto_sharded_stages",
+    srcs = ["slice_auto_sharded_stages.cc"],
+    hdrs = ["slice_auto_sharded_stages.h"],
+    deps = [
+        ":auto_sharding",
+        "//xla:shape_util",
+        # "//xla/service:hlo",
+        "//xla/service:hlo_pass",
+        "@nanobind",
+    ],
+)
+
+cc_library(
+    name = "alpa_compiler",
+    srcs = ["alpa_compiler.cc"],
+    hdrs = ["alpa_compiler.h"],
+    linkopts = [
+        "-L/root/miniconda3/envs/py39/lib",
+        "-lpython3.9",
+        "-Wl,-rpath,/root/miniconda3/envs/py39/lib",
+    ],
+    visibility = ["//xla/python:__pkg__"],    
+    deps = [
+        ":auto_sharding",
+        ":redundant_slice_eliminator",
+        ":grad_acc_rewrite",
+        ":slice_auto_sharded_stages",
+        ":stateful_rng_spmd_partitioner",
+        # Copied from gpu_compiler
+        "//xla/pjrt:pjrt_client",
+        "//xla/service:algebraic_simplifier",
+        "//xla/service:all_reduce_reassociate",
+        "//xla/service:call_inliner",
+        "//xla/service:conditional_canonicalizer",
+        "//xla/service:conditional_simplifier",
+        "//xla/service:dot_decomposer",
+        "//xla/service:dot_merger",
+        "//xla/service:dump",
+        "//xla/service:gather_expander",
+        "//xla/service:gather_simplifier",
+        "//xla/service:hlo_constant_folding",
+        "//xla/hlo/transforms:hlo_constant_splitter",
+        "//xla/service:hlo_cse",
+        "//xla/service:hlo_dce",
+        "//xla/service:hlo_pass",
+        "//xla/service:hlo_pass_pipeline",
+        "//xla/service:hlo_verifier",
+        "//xla/service:reshape_mover",
+        "//xla/service:scatter_expander",
+        "//xla/service:scatter_simplifier",
+        "//xla/service:sharding_propagation",
+        "//xla/service:sharding_remover",
+        "//xla/service:sort_simplifier",
+        "//xla/service:transpose_folding",
+        "//xla/service:tuple_simplifier",
+        "//xla/service:while_loop_constant_sinking",
+        "//xla/service:while_loop_simplifier",
+        "//xla/service:zero_sized_hlo_elimination",
+        "//xla/service/gpu:gpu_conv_rewriter",
+        "//xla/service:cpu_gpu_shape_verifier",
+        "//xla/service/gpu:matmul_utils",
+        "//xla/service:pass_context",
+        "//xla/tools:hlo_module_loader",
+    ]
+)
+
+xla_cc_binary(
+  name = "alpa_compiler_test",
+  srcs = ["alpa_compiler.cc"],
+  # compatible_with = get_compatible_with_libtpu_portable(),
+  deps = [
+      ":alpa_compiler",
+  ],
 )

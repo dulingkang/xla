@@ -17,7 +17,6 @@
 #include "xla/service/spmd/slice_auto_sharded_stages.h"
 
 #include <nanobind/nanobind.h>
-#include <nanobind/stl.h>
 #include <nanobind/ndarray.h>
 #include "xla/hlo/ir/hlo_casting_utils.h"
 #include "xla/hlo/ir/hlo_instructions.h"
@@ -235,12 +234,15 @@ std::vector<std::unique_ptr<HloModule>> SliceAutoShardedStagesInternal(
   PyGILState_STATE gstate = PyGILState_Ensure();
   {
     nb::object submodule =
-        nb::module_::import("mesha.shard_parallel.auto_sharding");
+        nb::module_::import_("mesha.shard_parallel.auto_sharding");
     nb::list stage_names;
     nb::list stage_modules;
     for (const auto& name : pipeline_stage_names) {
-      nb::str python_name(name);
-      stage_names.append(name);
+      // hhq      
+      // nb::str python_name(name);
+      // stage_names.append(name);
+      nb::str python_name = nb::str(name.data());
+      stage_names.append(python_name);
     }
     for (auto& stage_module : pipeline_stages) {
       std::shared_ptr<HloModule> module = std::move(stage_module);
@@ -258,7 +260,7 @@ std::vector<std::unique_ptr<HloModule>> SliceAutoShardedStagesInternal(
     std::vector<std::string> hooked_sharding_protos = HookShardingProto(module);
     nb::list hooked_shardings;
     for (const std::string sharding_proto : hooked_sharding_protos) {
-      hooked_shardings.append(nb::bytes(sharding_proto));
+      hooked_shardings.append(nb::bytes(sharding_proto.data()));
     }
     nb::object set_hooked_sharding_protos =
         submodule.attr("set_hooked_sharding_protos");
