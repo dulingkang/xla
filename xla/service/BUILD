@@ -6901,3 +6901,37 @@ tf_proto_library(
     cc_api_version = 2,
     make_default_target_header_only = True,
 )
+
+# hhq
+cc_library(
+    name = "pass_context",
+    srcs = [
+        "pass_context.cc",
+    ],
+    hdrs = [
+        "pass_context.h",
+    ],
+    deps = [
+        "//xla:types",
+        "//xla:util",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/types:any",
+        "@pybind11",
+    ],
+)
+
+# hhq
+# cc_library(
+#     name = "cpu_gpu_shape_verifier",
+#     srcs = ["cpu_gpu_shape_verifier.cc"],
+#     hdrs = ["cpu_gpu_shape_verifier.h"],
+#     deps = [
+#         ":hlo_verifier",
+#         "//xla:shape_util",
+#         "//xla:status",
+#         "//xla/hlo/ir:hlo",
+#         "@com_google_absl//absl/status",
+#         "@com_google_absl//absl/strings:str_format",
+#         "@tsl//tsl/platform:errors",
+#     ],
+# )

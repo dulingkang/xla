@@ -90,6 +90,13 @@ limitations under the License.
 #include "xla/util.h"
 #include "tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 
+// hhq
+#include "xla/hlo/experimental/auto_sharding/auto_sharding_runner.h"
+// #include "xla/service/spmd/alpa_compiler.h"
+#include "xla/service/spmd/grad_acc_rewrite.h"
+#include "xla/service/pass_context.h"
+// #include "xla/service/gpu/gpu_cost_model.h"
+
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
 
 namespace xla {
@@ -135,7 +142,11 @@ bool IsSanitized() { return IsAsan() || IsMsan() || IsTsan(); }
 
 }  // namespace
 
+const std::string MODULE_VERSION = "0.0.1";
+
 PYBIND11_MODULE(xla_extension, m) {
+  std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;
+
   tsl::ImportNumpy();
 
   // Exceptions
@@ -907,6 +918,42 @@ PYBIND11_MODULE(xla_extension, m) {
       py::arg("committed") = true, py::arg("force_copy") = false,
       py::arg("host_buffer_semantics") =
           PjRtClient::HostBufferSemantics::kZeroCopy);
+  
+  // hhq
+  m_nb.def("set_pass_context", &xla::pass_context::SetPassContext);
+  m_nb.def("clear_pass_context", &xla::pass_context::ClearPassContext);
+  // m_nb.def("estimate_hlo_module_cost", &xla::gpu::EstimateHloModuleCost);  
+  m_nb.def("set_hlo_module_output_shardings", &xla::spmd::SetHloModuleOutputShardings);
+  m_nb.def("set_hlo_module_input_shardings", &xla::spmd::SetHloModuleInputShardings);
+
+  m_nb.def(
+      "run_auto_sharding",
+      [](HloModule* hlo_module, const CompileOptions& options) {
+        TF_CHECK_OK(xla::spmd::RunAutoShardingPass(hlo_module, options));
+        return true;
+      },
+      "Run auto sharding pass");
+
+  m_nb.def(
+      "run_spmd_partitioner",
+      [](HloModule* hlo_module, const CompileOptions& options) {
+        TF_CHECK_OK(xla::spmd::RunSpmdPartitionerPass(hlo_module, options));
+        return true;
+      },
+      "Run spmd partitioner pass");
+
+  m_nb.def(
+      "hlo_module_count_flop_dot_conv_only",
+      [](const HloModule& module) -> double {
+        double ret = 0.0;
+        for (HloComputation* computation : module.computations()) {
+          ret += xla::CountFlopDotConvOnly(*computation);
+        }
+        return ret;
+      });
+
+  m_nb.def("get_grad_sync_channel_ids", &xla::spmd::GetGradSyncChannelIds);
+
 }  // NOLINT(readability/fn_size)
 
 }  // namespace xla

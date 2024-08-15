@@ -23,7 +23,10 @@ import logging
 import os
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
-from . import xla_extension as _xla
+# hhq
+# from . import xla_extension as _xla
+import xla_extension as _xla
+
 import ml_dtypes
 import numpy as np
 

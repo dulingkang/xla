@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -616,7 +617,6 @@ def set_tf_cuda_version(environ_cp):
                                                     _DEFAULT_CUDA_VERSION)
   environ_cp['TF_CUDA_VERSION'] = tf_cuda_version
 
-
 def set_tf_cudnn_version(environ_cp):
   """Set TF_CUDNN_VERSION."""
   ask_cudnn_version = (
@@ -627,7 +627,6 @@ def set_tf_cudnn_version(environ_cp):
                                                      ask_cudnn_version,
                                                      _DEFAULT_CUDNN_VERSION)
   environ_cp['TF_CUDNN_VERSION'] = tf_cudnn_version
-
 
 def set_tf_nccl_version(environ_cp):
   """Set TF_NCCL_VERSION."""
@@ -644,7 +643,6 @@ def set_tf_nccl_version(environ_cp):
                                                     'TF_NCCL_VERSION',
                                                     ask_nccl_version, '')
   environ_cp['TF_NCCL_VERSION'] = tf_nccl_version
-
 
 def get_native_cuda_compute_capabilities(environ_cp):
   """Get native cuda compute capabilities.
