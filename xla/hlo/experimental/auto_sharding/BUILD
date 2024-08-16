@@ -185,7 +185,7 @@ cc_library(  # hhq: xla_cc_binary(
         "//xla/service:hlo_cse",
         "//xla/service:sharding_propagation",
         "//xla/service:hlo_verifier",
-        # "//xla/service:cpu_gpu_shape_verifier",  
+        "//xla/service:cpu_gpu_shape_verifier",  
         "//xla/service:while_loop_constant_sinking",  
         "//xla/service:while_loop_simplifier",  
         "//xla/service:reshape_mover",  

@@ -49,7 +49,7 @@ limitations under the License.
 #include "xla/service/hlo_cse.h"
 #include "xla/service/sharding_propagation.h"
 #include "xla/service/hlo_verifier.h"
-// #include "xla/service/cpu_gpu_shape_verifier.h"
+#include "xla/service/cpu_gpu_shape_verifier.h"
 #include "xla/service/while_loop_constant_sinking.h"
 #include "xla/service/while_loop_simplifier.h"
 #include "xla/service/reshape_mover.h"
@@ -230,9 +230,9 @@ Status RunAutoShardingPass(HloModule* hlo_module,
       AutoShardingOption as_option;
       as_option.enable = pass_context::GetBool("auto_sharding::enable", true);
       as_option.memory_budget_per_device = pass_context::GetInt("auto_sharding::memory_budget_per_device", -1);
-      as_option.force_override_all_gather_cost = pass_context::GetBool("auto_sharding::force_all_gather_cost", false);
+      as_option.force_all_gather_cost = pass_context::GetBool("auto_sharding::force_all_gather_cost", false);
       as_option.all_gather_cost = pass_context::GetDouble("auto_sharding::all_gather_cost");
-      as_option.force_override_all_to_all_cost = pass_context::GetBool("auto_sharding::force_all_to_all_cost", false);
+      as_option.force_all_to_all_cost = pass_context::GetBool("auto_sharding::force_all_to_all_cost", false);
       as_option.all_to_all_cost = pass_context::GetDouble("auto_sharding::all_to_all_cost");
       as_option.allow_replicated_parameters = pass_context::GetBool("auto_sharding::allow_replicated_parameters", true);
       as_option.prefer_reduce_scatter = pass_context::GetBool("auto_sharding::prefer_reduce_scatter", false);

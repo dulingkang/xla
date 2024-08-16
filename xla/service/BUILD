@@ -6921,17 +6921,17 @@ cc_library(
 )
 
 # hhq
-# cc_library(
-#     name = "cpu_gpu_shape_verifier",
-#     srcs = ["cpu_gpu_shape_verifier.cc"],
-#     hdrs = ["cpu_gpu_shape_verifier.h"],
-#     deps = [
-#         ":hlo_verifier",
-#         "//xla:shape_util",
-#         "//xla:status",
-#         "//xla/hlo/ir:hlo",
-#         "@com_google_absl//absl/status",
-#         "@com_google_absl//absl/strings:str_format",
-#         "@tsl//tsl/platform:errors",
-#     ],
-# )
+cc_library(
+    name = "cpu_gpu_shape_verifier",
+    srcs = ["cpu_gpu_shape_verifier.cc"],
+    hdrs = ["cpu_gpu_shape_verifier.h"],
+    deps = [
+        ":hlo_verifier",
+        "//xla:shape_util",
+        "//xla:status",
+        "//xla/hlo/ir:hlo",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+        "@tsl//tsl/platform:errors",
+    ],
+)
