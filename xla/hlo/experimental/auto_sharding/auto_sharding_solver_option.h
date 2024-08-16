@@ -29,6 +29,7 @@ struct AutoShardingSolverOption {
   // This can force the auto-sharding pass to generate the data parallel
   // strategy.
   int force_batch_dim_to_mesh_dim;
+  bool force_override_all_gather_cost = false;
 
   // If true, override the cost of all-gather with the given value.
   bool override_all_gather_cost;
@@ -38,6 +39,7 @@ struct AutoShardingSolverOption {
   bool override_all_reduce_cost;
   double all_reduce_cost;
 
+  bool force_override_all_to_all_cost;
   // If true, override the cost of reduce-scatter with the given value.
   bool override_reduce_scatter_cost;
   double reduce_scatter_cost;

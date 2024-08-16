@@ -245,3 +245,38 @@ xla_cc_test(
         "@tsl//tsl/platform:test",
     ],
 )
+
+# hhq
+cc_library(
+    name = "grad_acc_rewrite",
+    srcs = [
+        "grad_acc_rewrite.cc",
+    ],
+    hdrs = [
+        "grad_acc_rewrite.h",
+    ],
+    deps = [
+      "//xla:shape_util",
+      "//xla/hlo/ir:hlo",
+      "//xla/service:hlo_pass",
+      "//xla/service:pass_context",
+      "//xla/service/spmd:spmd_partitioner",
+    ],
+)
+
+# hhq
+cc_library(
+    name = "redundant_slice_eliminator",
+    srcs = [
+        "redundant_slice_eliminator.cc",
+    ],
+    hdrs = [
+        "redundant_slice_eliminator.h",
+    ],
+    deps = [
+        "//xla:shape_util",
+        "//xla/hlo/ir:hlo",
+        "//xla/service:hlo_dce",
+        "//xla/service:hlo_pass",
+    ],
+)

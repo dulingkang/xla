@@ -20,7 +20,7 @@ limitations under the License.
 #include <deque>
 #include <utility>
 #include <vector>
-
+#include <cstdlib>
 #include "tsl/platform/env_time.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/host_info.h"
@@ -438,8 +438,8 @@ bool Env::CreateUniqueFileName(string* prefix, const string& suffix) {
   int32_t pid = GetProcessId();
   long long now_microsec = NowMicros();  // NOLINT
 
-  *prefix += strings::Printf("%s-%x-%d-%llx", port::Hostname().c_str(), tid,
-                             pid, now_microsec);
+ *prefix += strings::Printf("%s-%x-%d-%llx-%d", port::Hostname().c_str(), tid,
+                             pid, now_microsec, rand());
 
   if (!suffix.empty()) {
     *prefix += suffix;

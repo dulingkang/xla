@@ -790,6 +790,9 @@ cc_library(
         "@tsl//tsl/profiler/rpc:profiler_server_impl",
         "@tsl//tsl/profiler/rpc/client:capture_profile",
         "@tsl//tsl/profiler/rpc/client:profiler_client_impl",
+        # hhq
+        "@tsl//tsl/profiler/lib:profiler_factory_impl",
+        "@tsl//tsl/profiler/lib:profiler_session_impl",   
     ],
 )
 
@@ -1021,6 +1024,7 @@ tsl_pybind_extension(
         "//xla:statusor",
         "//xla:types",
         "//xla:util",
+        "//xla/hlo/experimental/auto_sharding:auto_sharding_runner",  # hhq
         "//xla/pjrt:interpreter_device",
         "//xla/pjrt:mlir_to_hlo",
         "//xla/pjrt:pjrt_api",
@@ -1033,6 +1037,8 @@ tsl_pybind_extension(
         "//xla/pjrt/distributed:service",
         "//xla/python/ifrt",
         "//xla/python/pjrt_ifrt",
+        "//xla/service/spmd:grad_acc_rewrite",  # hhq
+        "//xla/service:pass_context",  # hhq
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:span",

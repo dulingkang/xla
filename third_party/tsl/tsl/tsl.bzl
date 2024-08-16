@@ -36,6 +36,17 @@ load(
 )
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
 
+# hhq
+# load("//xla:xla.bzl", "_XLA_SHARED_OBJECT_SENSITIVE_DEPS")
+load(
+    "@tsl//tsl/platform:build_config_root.bzl",
+    "if_static",
+)
+load(
+    "@tsl//tsl/platform/default:cuda_build_defs.bzl",
+    "if_cuda_is_configured",
+)
+
 two_gpu_tags = ["requires-gpu-nvidia:2", "notap", "manual", "no_pip"]
 
 def clean_dep(target):

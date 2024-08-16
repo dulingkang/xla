@@ -79,6 +79,9 @@ struct AutoShardingOption {
   // Value 0 means setting it to the memory lower bound estimation.
   int64_t memory_budget_per_device = -1;
 
+  bool force_override_all_gather_cost = false;
+
+  bool force_override_all_to_all_cost = false;
   // Memory budget =
   //     memory_budget_ratio * (memory lower bound estimation).
   // Enabled when memory_budget_per_device == 0;

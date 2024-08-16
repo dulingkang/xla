@@ -39,6 +39,7 @@ limitations under the License.
 #include "xla/hlo/ir/hlo_sharding.h"
 #include "xla/hlo/utils/hlo_sharding_util.h"
 #include "xla/shape_util.h"
+#include "xla/service/hlo_creation_utils.h"  // hhq
 
 namespace xla {
 namespace spmd {
@@ -1472,6 +1473,20 @@ void FixMixedMeshShapeResharding(HloInstruction* inst, int operand_num,
   }
 
   TF_CHECK_OK(inst->ReplaceOperandWith(operand_num, replace_with));
+}
+
+// hhq
+HloComputation* GetOrCreateScalarAddComputation(HloComputation* computation,
+                                                PrimitiveType primitive_type) {
+  HloComputation::Builder b("scalar_add_computation");
+  Shape shape = ShapeUtil::MakeShape(primitive_type, {});
+  auto scalar_lhs =
+      b.AddInstruction(HloInstruction::CreateParameter(0, shape, "scalar_lhs"));
+  auto scalar_rhs =
+      b.AddInstruction(HloInstruction::CreateParameter(1, shape, "scalar_rhs"));
+  auto scalar_op = b.AddInstruction(HloInstruction::CreateBinary(
+      shape, HloOpcode::kAdd, scalar_lhs, scalar_rhs));
+  return computation->parent()->AddEmbeddedComputation(b.Build(scalar_op));
 }
 
 bool IsParameterConvert(const HloInstruction* inst) {

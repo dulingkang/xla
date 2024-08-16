@@ -447,6 +447,21 @@ void FixMixedMeshShapeResharding(HloInstruction* inst, int operand_num,
                                  const HloSharding& dst_sharding,
                                  const Array<int64_t>& device_mesh,
                                  ReshardingCache* resharding_cache);
+// Return whether this instruction is a "no-op" pass-through tuple
+inline bool IsPassThroughTuple(const HloInstruction* inst) {
+  return inst->IsCustomCall(kPipelineMarker) ||
+         (inst->opcode() == HloOpcode::kOptimizationBarrier &&
+          inst->shape().IsTuple());
+}
+
+
+// hhq
+// Normalize the dimension number of dot.
+// After normalization, each operand always have one contracting dim and
+// one space dim. The number of batch dims is unrestricted. For example,
+// This normalizes dot.1: f32[128] = dot([128], [128, 64]) to
+//                 dot.1: f32[1, 128] = dot([1, 128], [128, 64])
+absl::StatusOr<bool> NormalizeDotDimension(HloModule* module);
 
 /*
  * Gradient accumulation
