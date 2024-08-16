@@ -696,6 +696,11 @@ template <PrimitiveType kType>
 using NativeTypeOf =
     typename primitive_util::PrimitiveTypeToNative<kType>::type;
 
+constexpr bool IsSubByteNonPredType(PrimitiveType type) {
+  return IsArrayType(type) && type != PRED &&
+         primitive_util::BitWidth(type) < 8;
+}
+
 }  // namespace primitive_util
 }  // namespace xla
 

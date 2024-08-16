@@ -570,6 +570,7 @@ def find_cuda_config():
   base_paths = _list_from_env("TF_CUDA_PATHS",
                               _get_default_cuda_paths(cuda_version))
   base_paths = [path for path in base_paths if os.path.exists(path)]
+  print("hhq4:", libraries)
 
   result = {}
   if "cuda" in libraries:

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -847,7 +846,9 @@ def validate_cuda_config(environ_cp):
       env[k] = v
     return env
 
-  cuda_libraries = ['cuda', 'cudnn']
+  print("hhq2:", environ_cp)
+
+  cuda_libraries = ['cuda', 'cudnn']  # todo: hhq  nccl
   if is_linux():
     if environ_cp.get('TF_NCCL_VERSION', None):
       cuda_libraries.append('nccl')
@@ -916,6 +917,7 @@ def main():
   # Make a copy of os.environ to be clear when functions and getting and setting
   # environment variables.
   environ_cp = dict(os.environ)
+  print("hhq1:", environ_cp)
 
   try:
     current_bazel_version = retrieve_bazel_version()
@@ -985,7 +987,6 @@ def main():
 
     environ_save = dict(environ_cp)
     for _ in range(_DEFAULT_PROMPT_ASK_ATTEMPTS):
-
       if validate_cuda_config(environ_cp):
         cuda_env_names = [
             'TF_CUDA_VERSION',
@@ -1070,7 +1071,6 @@ def main():
     set_windows_build_flags()
 
   system_specific_test_config(environ_cp)
-
   print('Preconfigured Bazel build configs. You can use any of the below by '
         'adding "--config=<>" to your build command. See .bazelrc for more '
         'details.')

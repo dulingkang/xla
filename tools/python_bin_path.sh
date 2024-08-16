@@ -1,1 +1,1 @@
-export PYTHON_BIN_PATH="/root/miniconda3/envs/py39/bin/python3"
+export PYTHON_BIN_PATH="/root/miniconda3/envs/py39/bin/python"

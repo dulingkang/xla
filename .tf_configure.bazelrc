@@ -1,6 +1,6 @@
-build --action_env PYTHON_BIN_PATH="/root/miniconda3/envs/py39/bin/python3"
+build --action_env PYTHON_BIN_PATH="/root/miniconda3/envs/py39/bin/python"
 build --action_env PYTHON_LIB_PATH="/root/miniconda3/envs/py39/lib/python3.9/site-packages"
-build --python_path="/root/miniconda3/envs/py39/bin/python3"
+build --python_path="/root/miniconda3/envs/py39/bin/python"
 build --action_env CUDA_TOOLKIT_PATH="/usr/local/cuda-12.2"
 build --action_env TF_CUDA_COMPUTE_CAPABILITIES="8.0"
 build --action_env GCC_HOST_COMPILER_PATH="/usr/bin/x86_64-linux-gnu-gcc-10"
