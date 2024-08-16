@@ -36,6 +36,16 @@ load(
 )
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
 
+#load("//xla:xla.bzl", "_XLA_SHARED_OBJECT_SENSITIVE_DEPS")
+load(
+    "@tsl//tsl/platform:build_config_root.bzl",
+    "if_static",
+)
+load(
+    "@tsl//tsl/platform/default:cuda_build_defs.bzl",
+    "if_cuda_is_configured",
+)
+
 two_gpu_tags = ["requires-gpu-nvidia:2", "notap", "manual", "no_pip"]
 
 def clean_dep(target):
@@ -552,6 +562,42 @@ def tsl_pybind_extension_opensource(
         visibility = None,
         win_def_file = None):  # @unused
     """Builds a generic Python extension module."""
+    deps += [
+        "//xla:autotune_results_proto_cc_impl",
+        "//xla/service/gpu:backend_configs_cc_impl",
+        "//xla/stream_executor:device_description_proto_cc_impl",
+        "//xla/stream_executor:stream_executor_impl",
+        "//xla:xla_data_proto_cc_impl",
+        "//xla:xla_proto_cc_impl",
+        "//xla/service:hlo_proto_cc_impl",
+        "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
+        "@tsl//tsl/protobuf:distributed_runtime_payloads_proto_cc_impl",
+        "@tsl//tsl/protobuf:dnn_proto_cc_impl",
+        "@tsl//tsl/profiler/protobuf:xplane_proto_cc_impl",
+        "@com_google_protobuf//:protobuf",
+        "@tsl//tsl/profiler/backends/cpu:traceme_recorder_impl",
+        "@tsl//tsl/framework:allocator_registry_impl",
+        "@tsl//tsl/framework:allocator",
+        "@tsl//tsl/platform:env_impl",
+        "@tsl//tsl/profiler/backends/cpu:annotation_stack_impl",
+        "@tsl//tsl/profiler/utils:time_utils_impl",
+        "@tsl//tsl/protobuf:protos_all_cc_impl",
+        "@tsl//tsl/profiler/protobuf:profiler_service_proto_cc_impl",
+        "@tsl//tsl/protobuf:autotuning_proto_cc_impl",
+        "@tsl//tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
+        "@tsl//tsl/profiler/lib:profiler_session_impl",
+        "@tsl//tsl/profiler/lib:profiler_factory_impl",
+    ] + if_cuda_is_configured([
+        "//xla/stream_executor/cuda:all_runtime",
+        "//xla/stream_executor/cuda:cuda_stream",
+        "//xla/stream_executor/cuda:stream_executor_cuda",
+        "//xla/stream_executor/gpu:gpu_cudamallocasync_allocator",
+    ]) + if_rocm_is_configured([
+        "//xla/stream_executor/gpu:gpu_stream",
+        "//xla/stream_executor/rocm:all_runtime",
+        "//xla/stream_executor/rocm:stream_executor_rocm",
+        "//xla/tsl/util:determinism",
+])
     p = name.rfind("/")
     if p == -1:
         sname = name

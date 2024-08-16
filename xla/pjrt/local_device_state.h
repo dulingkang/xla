@@ -175,6 +175,9 @@ class LocalDeviceState {
   // Returns a fresh, PRNG-generated random seed for an XLA computation.
   int GetNewPrngSeed();
 
+  // Added by Alpa
+  se::Stream* GetLastDeviceToDeviceStream();
+
  private:
   Status SynchronizeAllActivity();
 

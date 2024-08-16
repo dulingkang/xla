@@ -90,6 +90,14 @@ limitations under the License.
 #include "xla/util.h"
 #include "tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 
+// // Added by Alpa
+#ifdef XLA_PYTHON_ENABLE_GPU
+#include "xla/service/gpu/alpa_events.h"
+#include "xla/service/gpu/alpa_nccl_wrapper.h"
+
+PYBIND11_MAKE_OPAQUE(std::vector<ncclComm_t>);
+#endif // XLA_PYTHON_ENABLE_GPU
+
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
 
 namespace xla {
@@ -907,6 +915,45 @@ PYBIND11_MODULE(xla_extension, m) {
       py::arg("committed") = true, py::arg("force_copy") = false,
       py::arg("host_buffer_semantics") =
           PjRtClient::HostBufferSemantics::kZeroCopy);
+  
+#ifdef XLA_PYTHON_ENABLE_GPU
+  py::class_<gpu::alpa::PyCommGroup, std::shared_ptr<gpu::alpa::PyCommGroup>>
+      alpa_comm_group(m, "CommGroup");
+  alpa_comm_group
+      .def(py::init([](std::shared_ptr<PyClient> backend) {
+        return std::make_shared<gpu::alpa::PyCommGroup>(backend);
+      }))
+      .def("record_events", &gpu::alpa::PyCommGroup::CommunicatorRecordEvents)
+      .def("wait_events", &gpu::alpa::PyCommGroup::CommunicatorWaitEvents)
+      .def("comm_wait_compute", &gpu::alpa::PyCommGroup::CommWaitCompute)
+      .def("compute_wait_comm", &gpu::alpa::PyCommGroup::ComputeWaitComm)
+      .def("nccl_create_communicators",
+           &gpu::alpa::PyCommGroup::NcclCreateCommunicators,
+           "create nccl communicators for cross-mesh communication")
+      .def("nccl_destroy_comms", &gpu::alpa::PyCommGroup::NcclDestroyComms,
+           "destroy comms")
+      .def("nccl_local_all_gather", &gpu::alpa::PyCommGroup::NcclLocalAllGather,
+           "nccl local allgather")
+      .def("nccl_broadcast_partial_gpus",
+           &gpu::alpa::PyCommGroup::NcclBroadcastPartialGPUs,
+           "nccl broadcast with only a subset of gpus in the host are involved")
+      .def("nccl_recv", &gpu::alpa::PyCommGroup::NcclRecv, "nccl recv data")
+      .def("nccl_send", &gpu::alpa::PyCommGroup::NcclSend, "nccl send data");
+  // m.def("test_array",xla::ValueOrThrowWrapper(xla::test_array));
+  m.def("set_num_device_on_host", &gpu::SetNumDeviceOnHost);
+  m.def("set_idx_to_uuid", &gpu::XlaSetIdxToUuid);
+  m.def("computation_wait_events", &gpu::alpa::ComputationWaitEvents);
+  m.def("set_comm_group_info", &gpu::alpa::SetPyCommGroup,
+        "set the mapping from meshes to the corresponding communication group "
+        "and nccl uuid");
+  m.def("reset_event_context", &gpu::alpa::ResetEventContext);
+  m.def("get_buffer_device_id", xla::ValueOrThrowWrapper(gpu::alpa::GetBufferDeviceId),
+        "get the local device id for one pybuffer");
+  m.def("nccl_get_unique_id", xla::ValueOrThrowWrapper(gpu::alpa::NcclGetUniqueId),
+        "get unique nccl id");
+  m.def("nccl_create_com", &gpu::alpa::NcclCreateCommunicators2, "nccl_create_com");
+  m.def("nccl_get_version", xla::ValueOrThrowWrapper(gpu::alpa::NcclGetVersion), "get nccl version");
+#endif // XLA_PYTHON_ENABLE_GPU
 }  // NOLINT(readability/fn_size)
 
 }  // namespace xla

@@ -29,9 +29,9 @@ except ImportError:
   from distutils.spawn import find_executable as which
 # pylint: enable=g-import-not-at-top
 
-_DEFAULT_CUDA_VERSION = '11'
-_DEFAULT_CUDNN_VERSION = '2'
-_DEFAULT_CUDA_COMPUTE_CAPABILITIES = '3.5,7.0'
+_DEFAULT_CUDA_VERSION = '12'
+# _DEFAULT_CUDNN_VERSION = '2'
+# _DEFAULT_CUDA_COMPUTE_CAPABILITIES = '7.0'
 
 _DEFAULT_PROMPT_ASK_ATTEMPTS = 10
 
