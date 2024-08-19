@@ -1018,6 +1018,7 @@ tsl_pybind_extension(
         ":util",
         ":weakref_lru_cache",
         ":xla_compiler",
+        # "//xla/hlo/experimental/auto_sharding",
         "//xla:literal",
         "//xla:shape_util",
         "//xla:status",

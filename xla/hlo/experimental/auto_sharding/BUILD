@@ -158,11 +158,58 @@ cc_library(
     deps = [
         ":auto_sharding",
         "//xla:status",
+        # "//xla/client:xla_builder",
+        "//xla:xla_data_proto_cc",
         "//xla/hlo/ir:hlo",
         "//xla/service:hlo_parser",
         "//xla/stream_executor:dnn",
         "//xla/tools:hlo_module_loader",
         "@tsl//tsl/platform:platform_port",
+
+        "//xla:array",
+        "//xla:comparison_util",
+        "//xla:literal",
+        "//xla:literal_util",
+        "//xla:printer",
+        "//xla:protobuf_util",
+        "//xla:shape_tree",
+        "//xla:shape_util",
+        "//xla:status_macros",
+        "//xla:statusor",
+        "//xla:types",
+        "//xla:util",
+        "//xla:window_util",
+        "//xla:xla_proto_cc",
+        "//xla/service:compilation_environments",
+        "//xla/service:computation_placer_hdr",
+        "//xla/service:hlo_lexer",
+        "//xla/service:hlo_module_config",
+        "//xla/service:hlo_proto_cc",
+        "//xla/service:mapped_ptr_container_sorter",
+        "//xla/service:name_uniquer",
+        "@com_google_absl//absl/algorithm:container",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/container:inlined_vector",
+        "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/hash",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:cord",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+        "@tsl//tsl/lib/gtl:iterator_range",
+        "@tsl//tsl/lib/gtl:map_util",
+        "@tsl//tsl/platform:env",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:fingerprint",
+        "@tsl//tsl/platform:human_readable_json",
+        "@tsl//tsl/platform:logging",
+        "@tsl//tsl/platform:protobuf",
+        "@tsl//tsl/platform:status",
+        "@tsl//tsl/platform:statusor",
+
         # hhq
         "//xla/service:compiler",
         "//xla/service:sharding_remover",
@@ -202,15 +249,15 @@ cc_library(
     ],
 )
 
-# # hhq
-# xla_cc_binary(
-#   name = "auto_sharding_runner_test",
-#   srcs = ["auto_sharding_runner.cc"],
-#   # compatible_with = get_compatible_with_libtpu_portable(),
-#   deps = [
-#       ":auto_sharding_runner",
-#   ],
-# )
+# hhq
+xla_cc_binary(
+  name = "auto_sharding_runner_test",
+  srcs = ["auto_sharding_runner.cc"],
+  # compatible_with = get_compatible_with_libtpu_portable(),
+  deps = [
+      ":auto_sharding_runner",
+  ],
+)
 
 build_test(
     name = "auto_sharding_runner_build_test",

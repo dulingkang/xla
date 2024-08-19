@@ -3,6 +3,7 @@
 #include <string>
 
 #include "absl/status/status.h"
+#include "xla/xla_data.pb.h"
 #include "xla/status.h"
 #include "xla/tools/hlo_module_loader.h"
 #include "tsl/platform/init_main.h"
@@ -11,7 +12,7 @@
 
 namespace xla {
 namespace spmd {
-namespace {
+// namespace {
 
 absl::Status RunAutoShardingPassFromFile(const std::string& file_name);
 
@@ -34,6 +35,6 @@ Status SetHloModuleOutputShardings(HloModule* module,
 Status SetHloModuleInputShardings(HloModule* module,
                                   const std::vector<OpSharding>& op_shardings);
 
-}  // namespace
+// }  // namespace
 }  // namespace spmd
 }  // namespace xla

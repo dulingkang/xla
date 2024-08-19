@@ -16,7 +16,7 @@ limitations under the License.
 #include <iostream>
 #include <ostream>
 #include <string>
-
+#include "xla/xla_data.pb.h"
 #include "xla/hlo/experimental/auto_sharding/auto_sharding.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/service/hlo_parser.h"
@@ -90,7 +90,7 @@ bool ConvIsLowerable(HloInstruction* conv) {
 }
 
 namespace spmd {
-namespace {
+// namespace {
 
 const char kBeforeAutoShardingDumpName[] = "before_run_auto_sharding";
 const char kBeforeSpmdPartitionDumpName[] = "before_run_spmd_partitioner";
@@ -377,7 +377,7 @@ Status SetHloModuleInputShardings(HloModule* module,
   return OkStatus();
 }
 
-}  // namespace
+// }  // namespace
 }  // namespace spmd
 }  // namespace xla
 

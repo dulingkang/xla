@@ -563,6 +563,8 @@ def tsl_pybind_extension_opensource(
         visibility = None,
         win_def_file = None):  # @unused
     """Builds a generic Python extension module."""
+        # TODO: hhq
+    # deps = deps + _XLA_SHARED_OBJECT_SENSITIVE_DEPS
     p = name.rfind("/")
     if p == -1:
         sname = name

@@ -633,6 +633,8 @@ class HloCostAnalysis : public ConstDfsHloVisitor {
   HloCostAnalysis& operator=(const HloCostAnalysis&) = delete;
 };
 
+int64_t CountFlopDotConvOnly(const HloComputation& computation);
+
 }  // namespace xla
 
 #endif  // XLA_SERVICE_HLO_COST_ANALYSIS_H_

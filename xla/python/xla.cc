@@ -941,15 +941,15 @@ PYBIND11_MODULE(xla_extension, m) {
       },
       "Run spmd partitioner pass");
 
-  // m.def(
-  //     "hlo_module_count_flop_dot_conv_only",
-  //     [](const HloModule& module) -> double {
-  //       double ret = 0.0;
-  //       for (HloComputation* computation : module.computations()) {
-  //         ret += xla::CountFlopDotConvOnly(*computation);
-  //       }
-  //       return ret;
-  //     });
+  m.def(
+      "hlo_module_count_flop_dot_conv_only",
+      [](const HloModule& module) -> int64_t {
+        int64_t ret = 0;
+        for (HloComputation* computation : module.computations()) {
+          ret += xla::CountFlopDotConvOnly(*computation);
+        }
+        return ret;
+      });
 
   m.def("get_grad_sync_channel_ids", &xla::spmd::GetGradSyncChannelIds);
 
