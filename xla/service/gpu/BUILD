@@ -3851,3 +3851,65 @@ xla_cc_test(
         "@tsl//tsl/platform:protobuf",
     ]) + ["//xla/tests:xla_internal_test_main"],
 )
+
+
+# Added by Alpa
+alias(
+    name = "alpa_nccl_group_base",
+    actual = if_nccl(":_alpa_nccl_group_base", ":empty"),
+)
+
+tsl_gpu_library(
+    name = "_alpa_nccl_group_base",
+    srcs = if_gpu_is_configured(["alpa_nccl_group_base.cc"]),
+    hdrs = if_gpu_is_configured(["alpa_nccl_group_base.h"]),
+    # Override tf_cuda_library()'s internal default value of ["//buildenv/target:gce"].
+    copts = [
+        "-fexceptions",
+        # "-fno-strict-aliasing",
+    ],
+    compatible_with = [],
+    defines = if_gpu_is_configured(["XLA_ENABLE_XCCL"]),
+    deps = [
+        ":alpa_event_manager",
+        "//xla/pjrt:pjrt_stream_executor_client",
+    ] + if_gpu_is_configured([
+        ":gpu_executable_run_options",
+        ":nccl_utils",
+        "//xla/stream_executor/gpu:gpu_stream",
+    ]) + if_cuda_is_configured([
+        "@local_config_nccl//:nccl",
+    ]) + if_rocm_is_configured([
+        "@local_config_rocm//rocm:rccl",
+    ]),
+)
+
+cc_library(
+    name = "alpa_event_manager",
+    srcs = [
+        "alpa_events.cc",
+    ],
+    hdrs = [
+        "alpa_events.h",
+    ],
+    deps = [
+        "//xla:status_macros",
+        "//xla/stream_executor:event",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_library(
+    name = "alpa_nccl_wrapper",
+    srcs = [
+        "alpa_nccl_wrapper.cc",
+    ],
+    hdrs = [
+        "alpa_nccl_wrapper.h",
+    ],
+    defines = if_gpu_is_configured(["XLA_ENABLE_XCCL"]),
+    deps = [
+        "alpa_nccl_group_base",
+        "//xla/python:py_client",
+    ],
+)
