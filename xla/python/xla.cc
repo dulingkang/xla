@@ -187,6 +187,10 @@ PYBIND11_MODULE(xla_extension, m) {
   // Must be before PyClient.compile.
   BuildXlaCompilerSubmodule(m);
 
+  py::class_<absl::Status>(m, "Status")
+     .def("ok", &absl::Status::ok, "check if the status is ok")
+     .def("raw_code", &absl::Status::raw_code, "returns a raw (canonical) error code corresponding to the enum value of `google.rpc.Code`");
+
   py::class_<PjRtDevice, ClientAndPtr<PjRtDevice>> device(
       m, "Device",
       "A descriptor of an available device.\n\nSubclasses are used to "
