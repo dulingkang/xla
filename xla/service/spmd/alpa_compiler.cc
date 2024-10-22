@@ -186,9 +186,6 @@ Status RunAutoShardingPass(HloModule* hlo_module,
       //     /*allow_spmd_sharding_propagation_to_output=*/true);
       spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true, /*propagate_metadata=*/false,
                                                  /*allow_spmd_sharding_propagation_to_output=*/absl::Span<const bool>{true});
-
-      std::cout << "hhq5" << std::endl;
-
       spmd_pipeline.AddPass<SliceAutoShardedStages>();
     } else {
       spmd_pipeline.AddPass<CallInliner>();

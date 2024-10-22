@@ -7960,6 +7960,7 @@ cc_library(
     ],
 )
 
+# hhq
 cc_library(
     name = "pass_context",
     srcs = [
@@ -7976,5 +7977,6 @@ cc_library(
         "@nanobind",
     ],
 )
+# end hhq
 
 exports_files(["xla_aot_compile_test_gpu_target_config.prototxt"])

@@ -594,7 +594,6 @@ BuildStrategyAndCost(
                                       strategy_map, ins, instruction_id,
                                       sequence, hlo_cost_analysis, cluster_env,
                                       batch_dim_map, option, call_graph));
-        std::cout << "hhq1: allow_recompute_heavy_op=" << option.allow_recompute_heavy_op << std::endl;
         if (option.allow_recompute_heavy_op) {
           AddReplicatedStrategy(
               ins, ins->shape(), cluster_env, strategy_map, strategy_group,

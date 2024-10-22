@@ -589,6 +589,7 @@ _transitive_parameters_library = rule(
     implementation = _transitive_parameters_library_impl,
 )
 
+# hhq
 _XLA_SHARED_OBJECT_SENSITIVE_DEPS = if_static(extra_deps = [], otherwise = [
     Label("//xla:autotune_results_proto_cc_impl"),
     Label("//xla:autotuning_proto_cc_impl"),

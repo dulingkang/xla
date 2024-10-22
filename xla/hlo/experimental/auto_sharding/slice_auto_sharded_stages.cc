@@ -242,6 +242,7 @@ std::vector<std::unique_ptr<HloModule>> SliceAutoShardedStagesInternal(
       // stage_names.append(name);
       nb::str python_name = nb::str(name.data());
       stage_names.append(python_name);
+      // std::cout << "hhq2: " << name << std::endl;
     }
     for (auto& stage_module : pipeline_stages) {
       std::shared_ptr<HloModule> module = std::move(stage_module);

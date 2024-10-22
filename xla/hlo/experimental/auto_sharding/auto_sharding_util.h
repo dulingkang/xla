@@ -253,13 +253,21 @@ inline bool IsPartialReduceCustomCall(const HloInstruction* inst) {
 inline const HloInstruction* PassThroughCustomCallMarkerGetSource(
     const HloInstruction* ins) {
   while (ins->opcode() == HloOpcode::kGetTupleElement &&
-         IsCustomCallMarker(ins->operand(0))) {
+         IsCustomCallMarker(ins->operand(0))) {  // hhq: IsPassThroughTuple, IsCustomCallMarker
+    // std::cout << "hhq4:" << ins->operand_count() << " " << ins->ToString() << std::endl;
+    // std::cout << "hhq5:" << ins->operand(0)->ToString() << std::endl;
     const HloInstruction* custom_call = ins->operand(0);
+    // std::cout << "hhq6:" << custom_call->operand_count() << " " << custom_call->ToString() << std::endl;
+    // std::cout << "hhq7:" << custom_call->operand(0)->ToString() << std::endl;
     const HloInstruction* tuple = custom_call->operand(0);
-    while (IsCustomCallMarker(tuple)) {
+    // std::cout << "hhq8:" << tuple->operand_count() << " " << tuple->ToString() << std::endl;
+    while (IsCustomCallMarker(tuple)) {  // hhq: IsPassThroughTuple, IsCustomCallMarker
+      // std::cout << "hhq9:" << tuple->operand_count() << " " << tuple->ToString() << std::endl;
       tuple = tuple->operand(0);
     }
+    // std::cout << "hhq10:" << tuple->operand_count() << " " << ins->tuple_index() << std::endl;
     ins = tuple->operand(ins->tuple_index());
+    // std::cout << "hhq11:" << std::endl;
   }
   return ins;
 }

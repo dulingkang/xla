@@ -136,7 +136,7 @@ Status CommGroup::NcclCreateCommunicators(
     auto comm_key = std::make_pair(nccl_uid_vec, device_ids[i]);
     NcclComm::Lock comm = comm_map[comm_key].Acquire();
     XLA_CUDA_RETURN_IF_ERROR(
-        ncclCommInitRank(comm.get(), world_size, nccl_uid, rank));
+      ncclCommInitRank(comm.get(), world_size, nccl_uid, rank));  // nccl里的函数
   }
   local_ids[nccl_uid_vec] = device_ids;
   XLA_CUDA_RETURN_IF_ERROR(ncclGroupEnd());

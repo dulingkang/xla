@@ -25,7 +25,8 @@ limitations under the License.
 #include "xla/tools/hlo_module_loader.h"
 #include "tsl/platform/init_main.h"
 
-// add by mesha
+/*******************added by mesha**************/
+#include <nanobind/nanobind.h>
 #include "xla/hlo/experimental/auto_sharding/slice_auto_sharded_stages.h"
 #include "xla/hlo/experimental/auto_sharding/auto_sharding_util.h"
 #include "xla/service/sharding_remover.h"
@@ -63,10 +64,11 @@ limitations under the License.
 #include "xla/service/spmd/grad_acc_rewrite.h"
 #include "xla/service/pass_context.h"
 
+#include "xla/client/xla_computation.h"
 #include "xla/client/executable_build_options.h"
 #include "xla/hlo/transforms/hlo_constant_splitter.h"
 #include "xla/pjrt/pjrt_executable.h"
-
+/*******************end added by mesha**************/
 
 namespace xla {
 
@@ -109,7 +111,6 @@ absl::Status RunAutoShardingPassFromFile(const std::string& file_name) {
   option.device_mesh_beta = {0.01, 1.0};
   TF_ASSIGN_OR_RETURN(bool changed, AutoSharding(option).Run(hlo_module.get()));
   CHECK(changed);
-  std::cout << hlo_module->ToString() << std::endl;
   return absl::OkStatus();
 }
 
@@ -227,8 +228,6 @@ Status RunAutoShardingPass(HloModule* hlo_module,
 
       spmd_pipeline.AddPass<HloConstantSplitter>();
 
-      // hhq
-      // spmd_pipeline.AddPass<AutoSharding>();
       AutoShardingOption as_option;
       as_option.enable = pass_context::GetBool("auto_sharding::enable", true);
       as_option.memory_budget_per_device = pass_context::GetInt("auto_sharding::memory_budget_per_device", -1);
@@ -273,7 +272,6 @@ Status RunAutoShardingPass(HloModule* hlo_module,
     }
     TF_RETURN_IF_ERROR(spmd_pipeline.Run(hlo_module).status());
   }
-  std::cout << hlo_module->ToString() << std::endl;
   return OkStatus();
 }
 
@@ -309,7 +307,6 @@ Status RunSpmdPartitionerPass(HloModule* hlo_module,
     }
     TF_RETURN_IF_ERROR(spmd_pipeline.Run(hlo_module).status());
   }
-  std::cout << hlo_module->ToString() << std::endl;
 
   return OkStatus();
 }
@@ -383,6 +380,7 @@ Status SetHloModuleInputShardings(HloModule* module,
 }  // namespace xla
 
 int main(int argc, char** argv) {
+  namespace nb = nanobind;
 //   const std::string& hlo_text = R"(I0521 12:04:45.883483    1509 service.cc:186] HloModule test_log_stripping
 // I0521 12:04:45.883483    1509 service.cc:186]
 // I0521 12:04:45.883483    1509 service.cc:186] ENTRY entry {
@@ -441,46 +439,6 @@ ENTRY %elementwise {
   // for (xla::HloSharding x:hlo_module->spmd_parameters_shardings()) {
   //   std::cout << "spmd_parameters_shardings:" << x.ToString() << std::endl;
   // }
-  std::cout << "spmd_output_sharding:" << hlo_module->spmd_output_sharding().ToString() << std::endl;
-  
-  // Test pyclient::compile
-  std::cout << "Test pyclient::compile...\n" << std::endl;
-
-  std::unique_ptr<ifrt::PjRtClient> ifrt_client;
-  {
-    nb::gil_scoped_release gil_release;
-    std::shared_ptr<KeyValueStoreInterface> kv_store = nullptr;
-    if (distributed_client != nullptr) {
-      kv_store = GetDistributedKeyValueStore(distributed_client,
-                                              /*key_prefix=*/"gpu:");
-    }
-    GpuClientOptions options;
-    options.allocator_config = GpuAllocatorConfig();
-    options.node_id = 0;
-    options.num_nodes = 1;
-    options.allowed_devices = std::nullopt;
-    options.platform_name = std::nullopt;
-    options.kv_store = kv_store;
-    options.enable_mock_nccl = false;
-    std::unique_ptr<PjRtClient> pjrt_client =
-        xla::ValueOrThrow(GetStreamExecutorGpuClient(options));
-    ifrt_client = ifrt::PjRtClient::Create(std::move(pjrt_client));
-  }
-  nb_class_ptr<PyClient> backend = PyClient::Make(std::move(ifrt_client));
-
-  PyClient::Compile(
-    std::move(backend), std::move(mlir_module), std::move(options),
-    std::move(host_callbacks));
 
   return 0;
 }
-
-
-// PyClient::Compile(
-//               std::move(client),
-//               std::string(mlir_module.c_str(), mlir_module.size()),
-//               std::move(options), std::move(host_callbacks))
-
-// PyClient::Compile(
-//   std::move(client), std::move(mlir_module), std::move(options),
-//   std::move(host_callbacks))

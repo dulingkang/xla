@@ -305,12 +305,15 @@ cc_library(
   name = "auto_sharding_runner",
   srcs = ["auto_sharding_runner.cc"],
   hdrs = ["auto_sharding_runner.h"],
+  # hhq
   linkopts = [
       "-L/root/miniconda3/envs/py39/lib",
       "-lpython3.9",
       "-Wl,-rpath,/root/miniconda3/envs/py39/lib",
   ],
   visibility = ["//xla/python:__pkg__"],
+  copts = ["-fexceptions"],
+
   compatible_with = get_compatible_with_libtpu_portable(),
   deps = [
       ":auto_sharding",
@@ -352,13 +355,15 @@ cc_library(
       "//xla/client:executable_build_options",
       "//xla/hlo/transforms:hlo_constant_splitter",
       "//xla/pjrt:pjrt_executable",
-
+      "//xla/client:xla_computation",
+      
       "//xla/tools:hlo_module_loader",
       "@com_google_absl//absl/status",
       "@tsl//tsl/platform:platform_port",
   ],
 )
 
+# hhq
 xla_cc_binary(
   name = "auto_sharding_runner_test",
   srcs = ["auto_sharding_runner.cc"],
@@ -384,11 +389,18 @@ build_test(
 xla_cc_test(
     name = "auto_sharding_test",
     srcs = ["auto_sharding_test.cc"],
-    tags = [
-        # Disabled until autosharding is fully supported in OSS,
-        # https://github.com/openxla/xla/issues/7248.
-        "no_oss",
+    # tags = [
+    #     # Disabled until autosharding is fully supported in OSS,
+    #     # https://github.com/openxla/xla/issues/7248.
+    #     "no_oss",
+    # ],
+    # hhq
+    linkopts = [
+        "-L/root/miniconda3/envs/py39/lib",
+        "-lpython3.9",
+        "-Wl,-rpath,/root/miniconda3/envs/py39/lib",
     ],
+
     deps = [
         ":auto_sharding",
         ":auto_sharding_option",
@@ -413,6 +425,8 @@ xla_cc_test(
         "@com_google_googletest//:gtest",
         "@tsl//tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:statusor",
+        # hhq
+        "@llvm-project//llvm:Support",
     ],
 )
 

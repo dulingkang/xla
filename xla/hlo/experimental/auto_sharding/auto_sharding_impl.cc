@@ -61,7 +61,7 @@ void PopulateTemporalValues(const CostGraph& cost_graph,
   // TODO(moffitt): Implement this.
 }
 
-// TODO: hhq. 0?!
+// TODO: 0? why?
 double GetDotConvReplicationPenalty(const HloInstruction* inst,
                                     size_t instruction_id, size_t window,
                                     const HloInstructionSequence& sequence,

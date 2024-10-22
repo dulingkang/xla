@@ -125,6 +125,7 @@ limitations under the License.
 
 // PYBIND11_MAKE_OPAQUE(std::vector<ncclComm_t>);  // todo: hhq. nanobind没有对应的函数
 #endif // XLA_PYTHON_ENABLE_GPU
+/*******added by mesha ********/
 
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
 
@@ -171,10 +172,10 @@ bool IsSanitized() { return IsAsan() || IsMsan() || IsTsan(); }
 
 }  // namespace
 
-const std::string MODULE_VERSION = "0.0.33";
+const std::string MODULE_VERSION = "0.0.72";  // hhq
 
 NB_MODULE(xla_extension, m_nb) {
-  std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;
+  std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;  // hhq
 
   // Initialize ABSL logging because code within XLA uses it.
 #ifndef PLATFORM_GOOGLE
@@ -917,8 +918,22 @@ NB_MODULE(xla_extension, m_nb) {
   m_nb.def("set_pass_context", &xla::pass_context::SetPassContext);
   m_nb.def("clear_pass_context", &xla::pass_context::ClearPassContext);
   // m_nb.def("estimate_hlo_module_cost", &xla::gpu::EstimateHloModuleCost);  
-  m_nb.def("set_hlo_module_output_shardings", &xla::spmd::SetHloModuleOutputShardings);
-  m_nb.def("set_hlo_module_input_shardings", &xla::spmd::SetHloModuleInputShardings);
+  // m_nb.def("set_hlo_module_output_shardings", &xla::spmd::SetHloModuleOutputShardings);
+  // m_nb.def("set_hlo_module_input_shardings", &xla::spmd::SetHloModuleInputShardings);
+  m_nb.def(
+      "set_hlo_module_output_shardings",
+      [](HloModule* hlo_module, const std::vector<OpSharding>& op_shardings) {
+        TF_CHECK_OK(xla::spmd::SetHloModuleOutputShardings(hlo_module, op_shardings));
+        return true;
+      },
+      "Set hlo module output shardings");
+  m_nb.def(
+      "set_hlo_module_input_shardings",
+      [](HloModule* hlo_module, const std::vector<OpSharding>& op_shardings) {
+        TF_CHECK_OK(xla::spmd::SetHloModuleInputShardings(hlo_module, op_shardings));
+        return true;
+      },
+      "Set hlo module input shardings");
 
   m_nb.def(
       "run_auto_sharding",

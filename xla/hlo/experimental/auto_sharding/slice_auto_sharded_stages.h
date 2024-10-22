@@ -14,8 +14,8 @@
  limitations under the License.
  */
 
-#ifndef XLA_SERVICE_SPMD__SLICE_AUTO_SHARDED_STAGES_H_
-#define XLA_SERVICE_SPMD__SLICE_AUTO_SHARDED_STAGES_H_
+#ifndef XLA_HLO_EXPERIMENTAL_AUTO_SHARDING_SLICE_AUTO_SHARDED_STAGES_H_
+#define XLA_HLO_EXPERIMENTAL_AUTO_SHARDING_SLICE_AUTO_SHARDED_STAGES_H_
 
 #include "xla/service/hlo_pass_interface.h"
 
@@ -39,4 +39,4 @@ class SliceAutoShardedStages : public HloModulePass {
 }  // namespace xla
 
 
-#endif  // XLA_SERVICE_SPMD__SLICE_AUTO_SHARDED_STAGES_H_
+#endif  // XLA_HLO_EXPERIMENTAL_AUTO_SHARDING_SLICE_AUTO_SHARDED_STAGES_H_

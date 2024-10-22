@@ -15,6 +15,7 @@ python_init_rules()
 
 load("//third_party/py:python_init_repositories.bzl", "python_init_repositories")
 
+# hhq
 python_init_repositories(
     requirements = {
         "3.9": "//:requirements_lock_3_11.txt",

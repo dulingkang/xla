@@ -277,9 +277,14 @@ InstructionDepthMap BuildInstructionDepthMap(
           if (reset) {
             depth_map[node] = 0;
           } else if (node->opcode() == HloOpcode::kGetTupleElement &&
+                     // hhq
                      IsCustomCallMarker(node->operand(0))) {
+                    //  IsPassThroughTuple(node->operand(0))) {
+            // std::cout << "hhq12" << std::endl;
+            // hhq
             depth_map[node] =
                 depth_map.at(PassThroughCustomCallMarkerGetSource(node));
+            // depth_map[node] = 1;
           } else {
             int64_t max_depth = depth_map.at(inst) + delta;
             for (const HloInstruction* operand : node->operands()) {

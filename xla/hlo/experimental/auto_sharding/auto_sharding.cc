@@ -2549,6 +2549,7 @@ absl::Status SetHloShardingPostProcessing(
           case HloOpcode::kParameter: {
             break;
           }
+
           default:
             LOG(FATAL) << "Unhandled instruction: " + inst->ToString();
         }
@@ -3567,6 +3568,7 @@ HloSharding GetReduceScatterOutput(const HloInstruction* ins,
       return Undefined();
     }
 
+    // std::cout << "hhq7:" << cluster_env.total_devices_ << std::endl;
     auto tile_assignment = strategy.output_sharding.tile_assignment().Reshape(
         {cluster_env.total_devices_});
     return HloSharding::Tile(std::move(tile_assignment));
@@ -3910,6 +3912,7 @@ absl::StatusOr<AutoShardingResult> AutoShardingImplementation::RunAutoSharding(
                      ComputationSchedulerToModuleScheduler(DFSMemoryScheduler),
                      execution_threads));
   const HloComputation* entry_computation = module->entry_computation();
+  // std::cout << "hhq14:" << entry_computation->ToString() << std::endl;
   std::unique_ptr<HloAliasAnalysis> alias_analysis =
       HloAliasAnalysis::Run(module).value();
 

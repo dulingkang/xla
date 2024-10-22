@@ -17,7 +17,7 @@ def inv_conv_hlomodule(hlo_module: xle.HloModule) -> xe.HloModule:
   Convert xle HloModule to xe HloModule.
   """
   b = hlo_module.as_serialized_hlo_module_proto()
-  return xle.HloModule.from_serialized_hlo_module_proto(b)
+  return xe.HloModule.from_serialized_hlo_module_proto(b)
 
 
 def conv_compileoptions(compile_options: xe.CompileOptions) -> xle.CompileOptions:
