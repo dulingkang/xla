@@ -3590,3 +3590,63 @@ xla_cc_test(
         "@tsl//tsl/platform:test",
     ],
 )
+# added by mesha
+alias(
+    name = "mesha_nccl_group_base",
+    actual = if_nccl(":_mesha_nccl_group_base", ":empty"),
+)
+
+tsl_gpu_library(
+    name = "_mesha_nccl_group_base",
+    srcs = if_gpu_is_configured(["mesha_nccl_group_base.cc"]),
+    hdrs = if_gpu_is_configured(["mesha_nccl_group_base.h"]),
+    # Override tsl_gpu_library()'s internal default value of ["//buildenv/target:gce"].
+    copts = [
+        "-fexceptions",
+        # "-fno-strict-aliasing",
+    ],
+    compatible_with = [],
+    defines = if_gpu_is_configured(["XLA_ENABLE_XCCL"]),
+    deps = [
+        ":mesha_event_manager",
+        "//xla/pjrt:pjrt_stream_executor_client",
+    ] + if_gpu_is_configured([
+        ":gpu_executable_run_options",
+        ":nccl_utils",
+        "//xla/stream_executor/gpu:gpu_stream",
+    ]) + if_cuda_is_configured([
+        "@local_config_nccl//:nccl",
+    ]) + if_rocm_is_configured([
+        "@local_config_rocm//rocm:rccl",
+    ]),
+)
+
+cc_library(
+    name = "mesha_event_manager",
+    srcs = [
+        "mesha_events.cc",
+    ],
+    hdrs = [
+        "mesha_events.h",
+    ],
+    deps = [
+        "//xla:status_macros",
+        "//xla/stream_executor:event",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_library(
+    name = "mesha_nccl_wrapper",
+    srcs = [
+        "mesha_nccl_wrapper.cc",
+    ],
+    hdrs = [
+        "mesha_nccl_wrapper.h",
+    ],
+    defines = if_gpu_is_configured(["XLA_ENABLE_XCCL"]),
+    deps = [
+        "mesha_nccl_group_base",
+        "//xla/python:py_client",
+    ],
+)

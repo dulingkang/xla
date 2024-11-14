@@ -1050,6 +1050,8 @@ tsl_pybind_extension(
         "@tsl//tsl/distributed_runtime/preemption:preemption_sync_manager",
         "@tsl//tsl/platform:logging",
         "@tsl//tsl/python/lib/core:numpy",
+        # added by mesha
+        "//xla/service/gpu:mesha_nccl_wrapper",
     ] + select({
         ":gpu_enabled": [
             "//xla/pjrt/gpu:se_gpu_pjrt_client",
