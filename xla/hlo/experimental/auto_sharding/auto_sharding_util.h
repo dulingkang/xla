@@ -41,7 +41,7 @@ limitations under the License.
 namespace xla {
 namespace spmd {
 
-inline constexpr absl::string_view kPipelineMarker = "xla_pipeline_marker";
+inline constexpr absl::string_view kPipelineMarker = "pipeline_marker";
 inline constexpr absl::string_view kIdentityMarker = "identity";
 inline constexpr absl::string_view kPipelineMarkerStartType = "start";
 inline constexpr absl::string_view kPipelineMarkerEndType = "end";
@@ -408,6 +408,12 @@ std::optional<HloSharding> PropagateDimwiseSharding(
     const HloSharding& input_spec, const Shape& old_shape,
     const Shape& new_shape);
 
+// hhq
+HloSharding PropagateDimwiseShardingSlice(const HloSharding& input_spec,
+                                          const Shape& old_shape,
+                                          const Shape& new_shape,
+                                          const Array<int64_t>& device_mesh);
+
 // Propagate sharding for ReduceWindow-like operations.
 // The sharding can successfully propagate if the window operation only happens
 // on tensor dimensions that are not tiled.
@@ -445,6 +451,15 @@ void FixMixedMeshShapeResharding(HloInstruction* inst, int operand_num,
                                  const HloSharding& dst_sharding,
                                  const Array<int64_t>& device_mesh,
                                  ReshardingCache* resharding_cache);
+
+/******* added by mesha ********/
+// Return whether this instruction is a "no-op" pass-through tuple
+inline bool IsPassThroughTuple(const HloInstruction* inst) {
+  return inst->IsCustomCall(kPipelineMarker) ||
+         (inst->opcode() == HloOpcode::kOptimizationBarrier &&
+          inst->shape().IsTuple());
+}
+/******* end added by mesha ********/
 
 /*
  * Gradient accumulation

@@ -53,7 +53,10 @@ class ClusterEnvironment {
         mesh_beta_(mesh_beta.begin(), mesh_beta.end()),
         prof_result_(prof_result),
         total_devices_(device_mesh.num_elements()),
-        device_mesh_1d_(original_device_mesh),
+        // device_mesh_1d_(original_device_mesh),
+        device_mesh_1d_(device_mesh),
+        original_device_mesh_1d_(original_device_mesh),
+        
         solver_option_(solver_option) {
     // Build replica group for each dimension.
     non_zero_mesh_dims_ =
@@ -61,7 +64,22 @@ class ClusterEnvironment {
     GenerateCachedReplicaGroups();
     // TODO(yuemmawang) Find the largest dimension in original_device_mesh and
     // create 1d mesh on that dimension.
-    device_mesh_1d_.Reshape({original_device_mesh.num_elements(), 1});
+    // device_mesh_1d_.Reshape({original_device_mesh.num_elements(), 1});
+    auto original_device_mesh_shape = original_device_mesh.dimensions();
+    auto max_dim_iterator = std::max_element(original_device_mesh_shape.begin(),
+                                             original_device_mesh_shape.end());
+    size_t largest_dim_idx =
+        std::distance(original_device_mesh_shape.begin(), max_dim_iterator);
+    std::vector<int64_t> device_mesh_1d_shape(device_mesh.num_dimensions(), 1);
+    device_mesh_1d_shape[largest_dim_idx] = device_mesh.num_elements();
+    device_mesh_1d_.Reshape(device_mesh_1d_shape);
+
+    std::vector<int64_t> original_device_mesh_1d_shape(
+        original_device_mesh.num_dimensions(), 1);
+    original_device_mesh_1d_shape[largest_dim_idx] =
+        original_device_mesh.num_elements();
+    original_device_mesh_1d_.Reshape(original_device_mesh_1d_shape);
+
   }
 
   size_t NumDevices() const { return total_devices_; }
@@ -106,6 +124,24 @@ class ClusterEnvironment {
   double DotCost(const Shape& lhs_shape, const Shape& rhs_shape,
                  const DotDimensionNumbers& dot_dnums) const;
 
+  double ReshardingCostMixedMeshShape(
+      const Shape& shape, absl::Span<const int64_t> src_tensor_dim_to_mesh_dim,
+      absl::Span<const int64_t> dst_tensor_dim_to_mesh_dim) const;
+
+  double CollectivePermuteCost(
+      double num_bytes,
+      absl::Span<const std::pair<int64_t, int64_t>> src_dst_pairs) const;
+
+  double TryCollectivePermuteForResharding(const Shape& shape,
+                                           const HloSharding& src_spec,
+                                           const HloSharding& dst_spec) const;
+
+  // This function attempts to overestimate the cost of replicating a tensor of
+  // shape `shape` sharded according to `src_spec`.
+  double OverestimateReplicationCost(const Shape& shape,
+                                     const HloSharding& src_spec,
+                                     const Array<int64_t>& device_mesh) const;
+
   double ReshardingCost(const Shape& shape, const HloSharding& src_spec,
                         const HloSharding& dst_spec) const;
 
@@ -135,6 +171,10 @@ class ClusterEnvironment {
   // Cache a flatten 1d version of the device mesh.
   // Used for mixed mesh shape strategies.
   Array<int64_t> device_mesh_1d_;
+
+  // Cache a flatten 1d version of the original device mesh.
+  // Used for mixed mesh shape strategies.
+  Array<int64_t> original_device_mesh_1d_;
 
   // The solver option may override the cost of communication primitives
   const AutoShardingSolverOption& solver_option_;

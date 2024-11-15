@@ -24,6 +24,9 @@ limitations under the License.
 #include "tsl/platform/errors.h"
 #include "tsl/platform/logging.h"
 #include "tsl/platform/status.h"
+// Added by mesha
+#include "xla/hlo/ir/hlo_instructions.h"
+#include "xla/hlo/ir/hlo_casting_utils.h"
 
 namespace xla {
 
@@ -34,6 +37,29 @@ StatusOr<bool> ZeroSizedHloElimination::Run(
   for (HloComputation* comp :
        module->MakeNonfusionComputations(execution_threads)) {
     for (HloInstruction* instruction : comp->MakeInstructionPostOrder()) {
+      // Added by mesha.
+      // We add the code in this pass for convenience, although the code
+      // is not related to this pass at all. We pick this pass because
+      // this pass will be called at a very early stage.
+      if (instruction->IsCustomCall("pipeline_marker")) {
+        // Set the input and output as alias
+        std::vector<std::pair<ShapeIndex, std::pair<int64_t, ShapeIndex>>>
+            aliasing;
+
+        ShapeUtil::VisitorFunction visitor = [&](const Shape& shape,
+                                                 const ShapeIndex& idx) {
+          aliasing.push_back(std::make_pair(idx, std::make_pair(0, idx)));
+        };
+        ShapeUtil::ForEachSubshape(instruction->shape(), visitor);
+        // for (int i = 0; i < instruction->shape().tuple_shapes_size(); i++) {
+        //   aliasing.push_back({{i}, {i, {}}});
+        // }        
+
+        HloCustomCallInstruction* call = Cast<HloCustomCallInstruction>(instruction);
+
+        call->set_output_to_operand_aliasing(aliasing);
+      }
+
       if (instruction->HasSideEffect() || !instruction->shape().IsArray() ||
           instruction->opcode() == HloOpcode::kConstant) {
         continue;

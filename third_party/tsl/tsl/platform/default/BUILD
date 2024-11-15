@@ -211,6 +211,9 @@ cc_library(
         "//tsl/platform:protobuf",
         "//tsl/platform:status",
         "//tsl/platform:strcat",
+        "//tsl/platform:types",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",        
     ],
 )
 

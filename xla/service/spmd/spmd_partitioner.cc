@@ -2352,6 +2352,12 @@ std::vector<ReplicaGroup> SpmdPartitioningVisitor::CreateReplicaGroups(
 }
 
 Status SpmdPartitioningVisitor::DefaultAction(HloInstruction* hlo) {
+  // Added by mesha
+  if (hlo->IsCustomCall("pipeline_marker") ||
+      hlo->IsCustomCall("__builtin$CrossMeshAllReduce")) {
+    return HandleElementwise(hlo);
+  }
+
   if (hlo->HasSideEffect() && !hlo->sharding().HasUniqueDevice()) {
     return Unimplemented("Side-effect ops cannot be replicated: %s",
                          hlo->ToString());
@@ -2872,10 +2878,10 @@ Status SpmdPartitioningVisitor::HandleSort(HloInstruction* hlo) {
   if (subshape.rank() > 1 && same_subsharding && cur_sharding.IsTiled() &&
       !cur_sharding.IsTileMaximal() &&
       cur_sharding.tile_assignment().dim(sort_dim) != 1) {
-    Array<int64_t> tile_assignment = cur_sharding.tile_assignment();
     std::vector<int64_t> tile_assignment_dims(
-        tile_assignment.dimensions().begin(),
-        tile_assignment.dimensions().end());
+        cur_sharding.tile_assignment().dimensions().begin(),
+        cur_sharding.tile_assignment().dimensions().end());
+
     // Pick the new dimension to move the sharding into
     int64_t picked_dim = -1;
     int64_t first_nonsort_nonsharded_dim = -1;
@@ -3076,9 +3082,9 @@ Status SpmdPartitioningVisitor::HandleReshape(HloInstruction* hlo) {
       return replicate();
     }
     // Fix potential device ordering mismatch in tile assignment.
-    Array<int64_t> new_input_tile_assignment = sharding.tile_assignment();
-    new_input_tile_assignment.Reshape(
+    auto new_input_tile_assignment = sharding.tile_assignment().Reshape(
         operand.sharding().tile_assignment().dimensions());
+
     auto aligned_sharding =
         sharding.ReplicateOnLastTileDim()
             ? HloSharding::PartialTile(new_input_tile_assignment)

@@ -1314,6 +1314,7 @@ Status ShapeVerifier::HandleCustomCall(HloInstruction* instruction) {
       TF_RET_CHECK(LayoutUtil::HasLayout(operand_shape_with_layout));
     }
   }
+
   for (const auto& pair : custom_call->output_to_operand_aliasing()) {
     TF_RET_CHECK(pair.second.first < custom_call->operand_count())
         << "Invalid aliasing operand index.";

@@ -100,6 +100,14 @@ limitations under the License.
 PYBIND11_MAKE_OPAQUE(std::vector<ncclComm_t>);
 #endif
 
+/*******added by mesha ********/
+#include "xla/hlo/experimental/auto_sharding/auto_sharding_runner.h"
+// #include "xla/service/spmd/alpa_compiler.h"
+#include "xla/service/spmd/grad_acc_rewrite.h"
+#include "xla/service/pass_context.h"
+// #include "xla/service/gpu/gpu_cost_model.h"
+/*******end added by mesha ********/
+
 // TODO(phawkins): remove host_id properties after JAX is update to avoid them.
 
 namespace xla {
@@ -145,7 +153,10 @@ bool IsSanitized() { return IsAsan() || IsMsan() || IsTsan(); }
 
 }  // namespace
 
+const std::string MODULE_VERSION = "0.0.1";  // added by mesha
+
 PYBIND11_MODULE(xla_extension, m) {
+  std::cout << "xla_extension version: " << MODULE_VERSION << std::endl;  // added by mesha
   tsl::ImportNumpy();
 
   // Exceptions
@@ -926,6 +937,53 @@ PYBIND11_MODULE(xla_extension, m) {
       py::arg("committed") = true, py::arg("force_copy") = false,
       py::arg("host_buffer_semantics") =
           PjRtClient::HostBufferSemantics::kZeroCopy);
+  /******* added by mesha ********/
+  m.def("set_pass_context", &xla::pass_context::SetPassContext);
+  m.def("clear_pass_context", &xla::pass_context::ClearPassContext);
+  // m.def("estimate_hlo_module_cost", &xla::gpu::EstimateHloModuleCost);  
+  m.def(
+      "set_hlo_module_output_shardings",
+      [](HloModule* hlo_module, const std::vector<OpSharding>& op_shardings) {
+        TF_CHECK_OK(xla::spmd::SetHloModuleOutputShardings(hlo_module, op_shardings));
+        return true;
+      },
+      "Set hlo module output shardings");
+  m.def(
+      "set_hlo_module_input_shardings",
+      [](HloModule* hlo_module, const std::vector<OpSharding>& op_shardings) {
+        TF_CHECK_OK(xla::spmd::SetHloModuleInputShardings(hlo_module, op_shardings));
+        return true;
+      },
+      "Set hlo module input shardings");
+
+  m.def(
+      "run_auto_sharding",
+      [](HloModule* hlo_module, const CompileOptions& options) {
+        TF_CHECK_OK(xla::spmd::RunAutoShardingPass(hlo_module, options));
+        return true;
+      },
+      "Run auto sharding pass");
+
+  m.def(
+      "run_spmd_partitioner",
+      [](HloModule* hlo_module, const CompileOptions& options) {
+        TF_CHECK_OK(xla::spmd::RunSpmdPartitionerPass(hlo_module, options));
+        return true;
+      },
+      "Run spmd partitioner pass");
+
+  m.def(
+      "hlo_module_count_flop_dot_conv_only",
+      [](const HloModule& module) -> int64_t {
+        int64_t ret = 0;
+        for (HloComputation* computation : module.computations()) {
+          ret += xla::CountFlopDotConvOnly(*computation);
+        }
+        return ret;
+      });
+
+  m.def("get_grad_sync_channel_ids", &xla::spmd::GetGradSyncChannelIds);
+  /******* end added by mesha ********/          
 
 // added by mesha
 #ifdef XLA_PYTHON_ENABLE_GPU

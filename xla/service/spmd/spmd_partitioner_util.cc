@@ -1914,10 +1914,19 @@ std::optional<GroupedSharding> AlignGroupsWithInternal(
     }
   }
   if (matching_groups && !grouped_sharding.sharding.IsTileMaximal()) {
-    auto tiles = grouped_sharding.sharding.tile_assignment();
-    tiles.Each([&](absl::Span<const int64_t> indices, int64_t* device) {
-      *device = original_src_to_ref_permutation[*device];
-    });
+    // auto tiles = grouped_sharding.sharding.tile_assignment();
+    // tiles.Each([&](absl::Span<const int64_t> indices, int64_t* device) {
+    //   *device = original_src_to_ref_permutation[*device];
+    // });
+    auto tiles = [&] {
+      auto array =
+          grouped_sharding.sharding.tile_assignment().shared_array_clone();
+      array->Each([&](absl::Span<const int64_t> indices, int64_t* device) {
+        *device = original_src_to_ref_permutation[*device];
+      });
+      return TileAssignment(std::move(array));
+    }();
+        
     grouped_sharding.sharding =
         grouped_sharding.sharding.ReplicateOnLastTileDim()
             ? HloSharding::PartialTile(tiles)

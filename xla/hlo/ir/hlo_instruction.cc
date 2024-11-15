@@ -4571,14 +4571,15 @@ bool HloInstruction::BackendConfigRep::operator==(
 
 /* static */ StatusOr<std::string> HloInstruction::BackendConfigToRawString(
     const tsl::protobuf::Message& proto) {
-  std::string ret;
-  // Pass ignore_accuracy_loss = true because estimated_cycles field can be
-  // INT64_MAX. If ignore_accuracy_loss = false and estimated_cycles =
-  // INT64_MAX, JsonFormat will return an error status, although there is no
-  // accuracy loss for int64_t.
-  TF_RETURN_IF_ERROR(tsl::ProtoToHumanReadableJson(
-      proto, &ret, /*ignore_accuracy_loss=*/true));
-  return ret;
+  // std::string ret;
+  // // Pass ignore_accuracy_loss = true because estimated_cycles field can be
+  // // INT64_MAX. If ignore_accuracy_loss = false and estimated_cycles =
+  // // INT64_MAX, JsonFormat will return an error status, although there is no
+  // // accuracy loss for int64_t.
+  // TF_RETURN_IF_ERROR(tsl::ProtoToHumanReadableJson(
+  //     proto, &ret, /*ignore_accuracy_loss=*/true));
+  // return ret;
+  return tsl::ProtoToHumanReadableJson(proto, /*ignore_accuracy_loss=*/true);  
 }
 
 const PrecisionConfig& HloInstruction::precision_config() const {

@@ -2804,6 +2804,7 @@ HloInstruction* HloParserImpl::CreateInstruction(  // NOLINT
         custom_call_instr->set_api_version(*api_version);
       }
       if (output_to_operand_aliasing.has_value()) {
+        std::cout << "wxx15" << std::endl;
         custom_call_instr->set_output_to_operand_aliasing(
             std::move(*output_to_operand_aliasing));
       }

@@ -39,6 +39,7 @@ limitations under the License.
 #include "xla/hlo/ir/hlo_sharding.h"
 #include "xla/hlo/utils/hlo_sharding_util.h"
 #include "xla/shape_util.h"
+#include "xla/service/hlo_creation_utils.h"  // added by mesha
 
 namespace xla {
 namespace spmd {
@@ -174,7 +175,7 @@ HloSharding BroadcastSharding(const HloSharding& input_spec,
     target_tile_assignment_dimensions.push_back(
         input_spec.tile_assignment().dimensions().back());
   }
-  Array<int64_t> new_tile_assignment = input_spec.tile_assignment();
+  TileAssignment new_tile_assignment = input_spec.tile_assignment();
   new_tile_assignment.Reshape(target_tile_assignment_dimensions);
 
   return input_spec.ReplicateOnLastTileDim()
@@ -204,6 +205,30 @@ std::optional<HloSharding> PropagateDimwiseSharding(
   }
 
   return input_spec;
+}
+
+HloSharding PropagateDimwiseShardingSlice(const HloSharding& input_spec,
+                                          const Shape& old_shape,
+                                          const Shape& new_shape,
+                                          const Array<int64_t>& device_mesh) {
+  if (input_spec.IsReplicated()) {
+    return input_spec;
+  }
+
+  CHECK(old_shape.IsArray());
+  std::vector<int64_t> tensor_to_mesh_dim =
+      GetTensorDimToMeshDim(new_shape.rank(), input_spec, device_mesh);
+
+  std::vector<int64_t> tensor_dims;
+  std::vector<int64_t> mesh_dims;
+  for (size_t i = 0; i < new_shape.rank(); ++i) {
+    if (new_shape.dimensions(i) == old_shape.dimensions(i) &&
+        tensor_to_mesh_dim[i] > -1) {
+      tensor_dims.push_back(i);
+      mesh_dims.push_back(tensor_to_mesh_dim[i]);
+    }
+  }
+  return Tile(new_shape, tensor_dims, mesh_dims, device_mesh);
 }
 
 // Propagate sharding for ReduceWindow-like operations.
@@ -925,8 +950,10 @@ void RemoveDuplicatedStrategy(std::unique_ptr<StrategyVector>& strategies) {
     std::vector<ShardingStrategy> new_vector;
     std::vector<ShardingStrategy> deduped_replicated_strategies;
     absl::flat_hash_set<std::string> added;
+    size_t num_skipped_due_to_infinity_costs = 0;
     for (size_t i = 0; i < strategies->leaf_vector.size(); ++i) {
       if (AllInfinityCosts(strategies->leaf_vector[i].resharding_costs)) {
+        num_skipped_due_to_infinity_costs++;
         continue;
       }
       std::string key = strategies->leaf_vector[i].output_sharding.ToString();
@@ -946,6 +973,10 @@ void RemoveDuplicatedStrategy(std::unique_ptr<StrategyVector>& strategies) {
         }
       }
     }
+    CHECK_LT(num_skipped_due_to_infinity_costs,
+             strategies->leaf_vector.size())
+        << "All strategies removed due to infinite resharding costs";
+
     // Keeps replicated strategies as the last ones.
     if (!deduped_replicated_strategies.empty()) {
       for (size_t i = 0; i < deduped_replicated_strategies.size(); ++i) {
@@ -1182,11 +1213,12 @@ bool IsValidTileAssignment(const HloSharding& spec) {
   }
 
   // Check all tile dims
-  const Array<int64_t>& tile_assignment = spec.tile_assignment();
+  const auto& tile_assignment = spec.tile_assignment();
   for (int i = 0; i < tile_assignment.num_dimensions(); i++) {
     if (tile_assignment.dim(i) != 1) {
       std::vector<int64_t> device_ids =
-          GetValuesAlongOneDim(tile_assignment, i).value();
+          GetValuesAlongOneDim(tile_assignment.array(), i).value();
+          
       auto status_or_delta = CheckArithmeticSequence(device_ids);
       if (!status_or_delta.ok()) {
         return false;
@@ -1243,7 +1275,8 @@ absl::StatusOr<std::vector<int64_t>> GetTensorDimToMeshDimNoCrash(
   do {
     auto transposed_mesh = Transpose(mesh, axes);
     if (std::equal(transposed_mesh.begin(), transposed_mesh.end(),
-                   spec.tile_assignment().begin())) {
+                   spec.tile_assignment().array().begin())) {
+
       found = true;
       break;
     }
@@ -1464,6 +1497,21 @@ void FixMixedMeshShapeResharding(HloInstruction* inst, int operand_num,
 
   TF_CHECK_OK(inst->ReplaceOperandWith(operand_num, replace_with));
 }
+
+/*******added by mesha ********/
+// HloComputation* GetOrCreateScalarAddComputation(HloComputation* computation,
+//                                                 PrimitiveType primitive_type) {
+//   HloComputation::Builder b("scalar_add_computation");
+//   Shape shape = ShapeUtil::MakeShape(primitive_type, {});
+//   auto scalar_lhs =
+//       b.AddInstruction(HloInstruction::CreateParameter(0, shape, "scalar_lhs"));
+//   auto scalar_rhs =
+//       b.AddInstruction(HloInstruction::CreateParameter(1, shape, "scalar_rhs"));
+//   auto scalar_op = b.AddInstruction(HloInstruction::CreateBinary(
+//       shape, HloOpcode::kAdd, scalar_lhs, scalar_rhs));
+//   return computation->parent()->AddEmbeddedComputation(b.Build(scalar_op));
+// }
+/*******end added by mesha ********/
 
 bool IsParameterConvert(const HloInstruction* inst) {
   if (inst->opcode() == HloOpcode::kConvert &&

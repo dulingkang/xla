@@ -1,6 +1,7 @@
 # Description:
 #   GPU-specific components in XLA service implementation.
 
+load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")  # hhq
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load(
     "@tsl//tsl/platform:build_config.bzl",
