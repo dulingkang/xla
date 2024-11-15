@@ -2292,7 +2292,7 @@ GroupedSharding GetNonContractingPartitionGroupedShardingForMatchedOperand(
   }
   GroupedSharding output_grouped =
       hlo_sharding_util::GroupShardingOnDims(output_sharding, output_dims);
-  Array<int64_t> reshaped_matching_tiling = matching_sharding.tile_assignment();
+  auto reshaped_matching_tiling = matching_sharding.tile_assignment();
   reshaped_matching_tiling.Reshape(matching_sharding_dims);
   return AlignGroupsWith(
       hlo_sharding_util::GroupShardingOnDims(

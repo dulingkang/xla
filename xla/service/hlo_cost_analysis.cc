@@ -1395,4 +1395,21 @@ bool HloCostAnalysis::KeyToCopyFromSubcomputation(absl::string_view key) const {
          !absl::StartsWith(key, kUtilizationKey);
 }
 
+/******* added by mesha ********/
+int64_t CountFlopDotConvOnly(const HloComputation& computation) {
+  auto analysis = absl::make_unique<HloCostAnalysis>([](const Shape&) { return 0; });
+
+  auto status = computation.Accept(analysis.get());
+
+  int64_t ret = 0;
+  for (const HloInstruction* instruction : computation.instructions()) {
+    if (instruction->opcode() == HloOpcode::kDot ||
+        instruction->opcode() == HloOpcode::kConvolution) {
+      ret += analysis->flop_count(*instruction);
+    }
+  }
+  return ret;
+}
+/******* end added by mesha ********/
+
 }  // namespace xla

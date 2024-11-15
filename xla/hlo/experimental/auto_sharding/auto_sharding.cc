@@ -76,10 +76,14 @@ std::vector<double> ReshardingCostVector(
   CHECK(!strategies->is_tuple) << "Only works with strategy vector.";
   std::vector<double> ret;
   ret.reserve(strategies->leaf_vector.size());
+  auto required_sharding_for_resharding = required_sharding.IsTileMaximal()
+                                              ? HloSharding::Replicate()
+                                              : required_sharding;
   for (const auto& x : strategies->leaf_vector) {
     ret.push_back(cluster_env.ReshardingCost(operand_shape, x.output_sharding,
-                                             required_sharding));
+                                             required_sharding_for_resharding));
   }
+
   return ret;
 }
 
@@ -159,11 +163,25 @@ GenerateReshardingCostsAndMissingShardingsForAllOperands(
         cur_input_sharding =
             GetInputSharding(ins, operand, k, output_sharding, call_graph);
       }
+
       if (!cur_input_sharding.has_value() &&
           ((ins->opcode() == HloOpcode::kGather && k == 0) ||
            (ins->opcode() == HloOpcode::kScatter && k != 0))) {
         cur_input_sharding = HloSharding::Replicate();
       }
+      // if (!cur_input_sharding.has_value()) {
+      //   if ((ins->opcode() == HloOpcode::kGather && k == 0) ||
+      //       (ins->opcode() == HloOpcode::kScatter && k != 0)) {
+      //     // is_sharding_default_replicated = true;
+      //     cur_input_sharding = HloSharding::Replicate();
+      //   } else if (ins->opcode() == HloOpcode::kCustomCall) {
+      //     // is_sharding_default_replicated = true;
+      //     cur_input_sharding = HloSharding::Replicate();
+      //   } else if (ins->opcode() == HloOpcode::kRngBitGenerator) {
+      //     cur_input_sharding = HloSharding::Replicate();
+      //   }
+      // }
+
       CHECK(cur_input_sharding.has_value());
       if (!input_shardings[k].has_value()) {
         input_shardings[k] = cur_input_sharding;
@@ -1368,6 +1386,12 @@ BuildStrategyAndCost(const HloInstructionSequence& sequence,
                   ins, output_spec, strategy_map, cluster_env, call_graph,
                   input_shardings_optional);
 
+          // for (int ii = 0; ii < resharding_cost.size(); ii++) {
+          //   for (int jj = 0; jj < resharding_cost[0].size(); jj++) {
+          //     std::cout << "wxx2:" << sid << " " << ii << " " << jj << " " << resharding_cost[ii][jj] << std::endl;
+          //   }
+          // }
+
           std::vector<HloSharding> input_shardings;
           for (auto sharding_optional : input_shardings_optional) {
             CHECK(sharding_optional.has_value());
@@ -1378,6 +1402,7 @@ BuildStrategyAndCost(const HloInstructionSequence& sequence,
               {name, output_spec, compute_cost, communication_cost, memory_cost,
                std::move(resharding_cost), input_shardings}));
         }
+
         break;
       }
       case HloOpcode::kGather: {
@@ -1644,8 +1669,8 @@ BuildStrategyAndCost(const HloInstructionSequence& sequence,
 
           // Find output shardings.
           switch (opcode) {
+            case HloOpcode::kSlice:                      
             case HloOpcode::kPad:
-            case HloOpcode::kSlice:
             case HloOpcode::kConcatenate:
             case HloOpcode::kDynamicSlice:
             case HloOpcode::kDynamicUpdateSlice:
@@ -1912,14 +1937,53 @@ BuildStrategyAndCost(const HloInstructionSequence& sequence,
         break;
       }
       case HloOpcode::kCustomCall: {
+        auto generate_non_following_strategies =
+            [&](bool only_replicated,
+                absl::flat_hash_set<int64_t>
+                    operands_to_consider_all_strategies_for = {}) {
+              if (only_replicated) {
+                if (ins->shape().IsTuple()) {
+                  strategies = CreateTupleStrategyVector(instruction_id);
+                  strategies->childs.reserve(
+                      ins->shape().tuple_shapes_size());
+                  for (size_t i = 0; i < ins->shape().tuple_shapes_size();
+                       ++i) {
+                    std::unique_ptr<StrategyVector> child_strategies =
+                        CreateLeafStrategyVector(instruction_id, ins,
+                                                strategy_map, leaf_strategies);
+                    AddReplicatedStrategy(ins, ins->shape().tuple_shapes(i),
+                                          cluster_env, strategy_map,
+                                          child_strategies, replicated_penalty);
+                    strategies->childs.push_back(
+                        std::move(child_strategies));
+                  }
+                } else {
+                  strategies = CreateLeafStrategyVector(
+                      instruction_id, ins, strategy_map, leaf_strategies);
+                  AddReplicatedStrategy(ins, ins->shape(), cluster_env,
+                                        strategy_map, strategies,
+                                        replicated_penalty);
+                }
+              } else {
+                strategies =
+                    CreateAllStrategiesVector(
+                        ins, ins->shape(), instruction_id, leaf_strategies,
+                        cluster_env, strategy_map, solver_option, replicated_penalty,
+                        batch_dim_map, call_graph, only_allow_divisible,
+                        /* create_replicated_strategies */ true)
+                        .value();
+              }
+            };
+
         if (IsCustomCallMarker(ins)) {
-          const HloInstruction* operand = ins->operand(0);
-          const StrategyVector* src_strategies = strategy_map.at(operand).get();
-          CHECK(src_strategies->is_tuple);
-          strategies = MaybeFollowInsStrategyVector(
-              src_strategies, ins->shape(), instruction_id,
-              /* have_memory_cost= */ true, leaf_strategies, cluster_env,
-              pretrimmed_strategy_map);
+          // const HloInstruction* operand = ins->operand(0);
+          // const StrategyVector* src_strategies = strategy_map.at(operand).get();
+          // CHECK(src_strategies->is_tuple);
+          // strategies = MaybeFollowInsStrategyVector(
+          //     src_strategies, ins->shape(), instruction_id,
+          //     /* have_memory_cost= */ true, leaf_strategies, cluster_env,
+          //     pretrimmed_strategy_map);
+          generate_non_following_strategies(false);          
         } else if (ins->has_sharding()) {
           if (ins->shape().IsTuple()) {
             strategies = CreateTupleStrategyVector(instruction_id);
@@ -2001,6 +2065,7 @@ BuildStrategyAndCost(const HloInstructionSequence& sequence,
         LOG(FATAL) << "Unhandled instruction: " + ins->ToString();
     }
     RemoveDuplicatedStrategy(strategies);
+
     if (ins->has_sharding()) {
       // Finds the sharding strategy that aligns with the given sharding spec
       // Do not merge nodes if this one instruction has annotations.
@@ -3936,7 +4001,7 @@ HloSharding GetReduceScatterOutput(const HloInstruction* ins,
       return Undefined();
     }
 
-    Array<int64_t> tile_assignment = strategy.output_sharding.tile_assignment();
+    const auto& tile_assignment = strategy.output_sharding.tile_assignment();
     tile_assignment.Reshape({cluster_env.total_devices_});
     return HloSharding::Tile(std::move(tile_assignment));
 

@@ -19,9 +19,11 @@ package_group(
 cc_library(
     name = "hlo",
     srcs = [
+        "collective_device_list.cc",
         "dfs_hlo_visitor.cc",
         "dynamic_parameter_binding.cc",
         "hlo_computation.cc",
+        "hlo_frontend_attributes.cc",
         "hlo_input_output_alias_config.cc",
         "hlo_instruction.cc",
         "hlo_instructions.cc",
@@ -34,6 +36,7 @@ cc_library(
         "hlo_sharding_metadata.cc",
     ],
     hdrs = [
+        "collective_device_list.h",
         "dfs_hlo_visitor.h",
         "dfs_hlo_visitor_with_default.h",
         "dynamic_parameter_binding.h",
@@ -41,6 +44,7 @@ cc_library(
         "hlo_clone_context.h",
         "hlo_computation.h",
         "hlo_domain_metadata.h",
+        "hlo_frontend_attributes.h",
         "hlo_input_output_alias_config.h",
         "hlo_instruction.h",
         "hlo_instructions.h",
@@ -53,6 +57,9 @@ cc_library(
         "hlo_sharding_metadata.h",
     ],
     deps = [
+        ":backend_config",
+        ":ptrvec",
+        ":tile_assignment",
         "//xla:array",
         "//xla:comparison_util",
         "//xla:literal",
@@ -61,7 +68,6 @@ cc_library(
         "//xla:protobuf_util",
         "//xla:shape_tree",
         "//xla:shape_util",
-        "//xla:status",
         "//xla:status_macros",
         "//xla:statusor",
         "//xla:types",
@@ -78,12 +84,16 @@ cc_library(
         "//xla/service:name_uniquer",
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/container:inlined_vector",
         "@com_google_absl//absl/functional:function_ref",
-        "@com_google_absl//absl/hash",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:cord",
         "@com_google_absl//absl/strings:str_format",
@@ -123,5 +133,45 @@ cc_library(
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "tile_assignment",
+    srcs = ["tile_assignment.cc"],
+    hdrs = ["tile_assignment.h"],
+    deps = [
+        "//xla:array",
+        "//xla:printer",
+        "//xla:util",
+        "@com_google_absl//absl/algorithm:container",
+        "@com_google_absl//absl/container:inlined_vector",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "backend_config",
+    srcs = ["backend_config.cc"],
+    hdrs = ["backend_config.h"],
+    deps = [
+        "//xla:util",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/synchronization",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:human_readable_json",
+        "@tsl//tsl/platform:protobuf",
+    ],
+)
+
+cc_library(
+    name = "ptrvec",
+    hdrs = ["ptrvec.h"],
+    deps = [
+        "@com_google_absl//absl/log:check",
+        "@tsl//tsl/platform:logging",
     ],
 )

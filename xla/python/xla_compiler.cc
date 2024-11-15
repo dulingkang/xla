@@ -557,6 +557,34 @@ void BuildXlaCompilerSubmodule(py::module& m) {
             if (!m.has_spmd_output_sharding()) return std::nullopt;
             return m.spmd_output_sharding().ToProto();
           })
+      /******* added by mesha ********/
+      .def("has_schedule", &HloModule::has_schedule)
+      // .def("spmd_output_sharding", &HloModule::spmd_output_sharding)
+      .def("spmd_parameters_shardings", &HloModule::spmd_parameters_shardings)
+      .def("set_spmd_output_sharding", &HloModule::set_spmd_output_sharding)
+      .def("set_spmd_parameters_shardings", &HloModule::set_spmd_parameters_shardings)
+      .def("infer_spmd_shardings", &HloModule::infer_spmd_shardings)
+      .def("setup_alias", [](std::shared_ptr<HloModule> hlo_module,
+                             const std::vector<int64_t>& output_index,
+                             int64_t param_number,
+                             const std::vector<int64_t>& param_index) {
+            hlo_module->input_output_alias_config().SetUpAlias(
+               ShapeIndex(output_index.begin(), output_index.end()),
+               param_number,
+               ShapeIndex(param_index.begin(), param_index.end()));
+          })
+      .def("program_shape", [](const HloModule& hlo_module) {
+            return hlo_module.entry_computation_layout().ComputeProgramShape();
+          })
+      .def("parameter_shapes", [](const HloModule& hlo_module) -> std::vector<Shape> {
+            const auto params = hlo_module.entry_computation()->parameter_instructions();
+            std::vector<Shape> ret(params.size());
+            for (size_t i = 0; i < params.size(); ++i) {
+              ret[i] = params[i]->shape();
+            }
+            return ret;
+          })
+      /******* end added by mesha ********/          
       .def_property_readonly(
           "spmd_parameters_shardings",
           [](const HloModule& m)
@@ -1009,7 +1037,7 @@ void BuildXlaCompilerSubmodule(py::module& m) {
            })
       .def("tile_assignment_devices",
            [](const xla::HloSharding& self) {
-             return absl::MakeConstSpan(self.tile_assignment().data(),
+             return absl::MakeConstSpan(self.tile_assignment().array().data(),
                                         self.tile_assignment().num_elements());
            })
       .def("replicate_on_last_tile_dim",

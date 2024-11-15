@@ -1001,6 +1001,15 @@ ShapeUtil::MakeShapeWithDescendingLayoutAndSamePhysicalLayout(
   return *return_shape;
 }
 
+/* static */ const Shape& ShapeUtil::GetSubshapeOneIndex(const Shape& shape,
+                                                         int64_t index) {
+  const Shape* return_shape = &shape;
+  CHECK(return_shape->IsTuple())
+      << "Invalid index " << index << " for shape " << shape;
+  return_shape = &return_shape->tuple_shapes(index);
+  return *return_shape;
+}
+
 /* static */ StatusOr<const Shape*> ShapeUtil::TryGetSubshape(
     const Shape& shape, ShapeIndexView index) {
   const Shape* return_shape = &shape;
@@ -1035,9 +1044,18 @@ bool ShapeUtil::IsLeafIndex(const Shape& shape, const ShapeIndex& index) {
   if (!shape.IsTuple()) {
     return 1;
   }
+  return GetLeafCountTuple(shape);
+}
+
+/* static */ int64_t ShapeUtil::GetLeafCountTuple(const Shape& shape) {
+  DCHECK(shape.IsTuple());
   int64_t count = 0;
   for (const Shape& subshape : shape.tuple_shapes()) {
-    count += GetLeafCount(subshape);
+    if (subshape.IsTuple()) {
+      count += GetLeafCount(subshape);
+    } else {
+      ++count;
+    }
   }
   return count;
 }

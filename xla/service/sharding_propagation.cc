@@ -54,6 +54,18 @@ limitations under the License.
 namespace xla {
 namespace {
 
+// Returning the improved sharding of an instruction from some other sharding.
+std::optional<HloSharding> ReturnImprovedSharding(
+    HloSharding sharding, HloInstruction* instruction,
+    bool may_combine_partial_sharding,
+    bool allow_aggressive_resharding = false) {
+  return hlo_sharding_util::ReturnImprovedShardingImpl(
+      std::move(sharding),
+      instruction->has_sharding() ? &instruction->sharding() : nullptr,
+      instruction->shape(), may_combine_partial_sharding,
+      allow_aggressive_resharding);
+}
+
 // Returns true iff the specified hlo or sharding has a spatially partitioned
 // sharding (tiled or replicated) that can be propagated by sharding
 // propagation.
@@ -77,64 +89,10 @@ bool MaybeImproveInstructionSharding(HloSharding sharding,
                                      HloInstruction* instruction,
                                      bool may_combine_partial_sharding,
                                      bool allow_aggressive_resharding = false) {
-  // Allows improve from tile maximal shardings to manual shardings.
-  if (instruction->has_sharding()) {
-    bool no_worse = true;
-    bool changed = false;
-    const std::vector<HloSharding>& flattened_instruction_shardings =
-        instruction->sharding().tuple_elements();
-    const std::vector<HloSharding>& flatten_shardings =
-        sharding.tuple_elements();
-    CHECK_EQ(flattened_instruction_shardings.size(), flatten_shardings.size());
-    for (int i = 0; i != flattened_instruction_shardings.size(); ++i) {
-      if (flattened_instruction_shardings[i] != flatten_shardings[i]) {
-        changed = true;
-        if (!flattened_instruction_shardings[i].IsTileMaximal() ||
-            !flatten_shardings[i].IsManual()) {
-          no_worse = false;
-          break;
-        }
-      }
-    }
-    // Replace sharding if we are know that it strictly improves(i.e. the
-    // sharding is changed and no worse than before) from tile maximal
-    // (sub)shardings to manual shardings. Otherwise pass through.
-    if (no_worse && changed) {
-      instruction->set_sharding(sharding);
-      return true;
-    }
-  }
-  // We don't want to propagate tile maximal shardings.
-  if (!IsSpatiallyPartitioned(sharding)) {
-    return false;
-  }
-  // Any sharding is better then no sharding.
-  if (!instruction->has_sharding()) {
-    instruction->set_sharding(std::move(sharding));
-    return true;
-  }
-  // We don't want to propagate manual shardings.
-  if (sharding.IsManual()) {
-    return false;
-  }
-  int64_t sharding_tiles = sharding.NumTiles();
-  if (hlo_sharding_util::MergeSharding(instruction->sharding(), &sharding,
-                                       may_combine_partial_sharding)) {
-    // Override existing tiled sharding only when the new sharding is compatible
-    // with the existing one. This avoids unexpected resharding when `sharding`
-    // just has more tiles than existing sharding but they are not mergeable.
-    if (!allow_aggressive_resharding && instruction->shape().IsArray() &&
-        !instruction->sharding().IsTileMaximal() &&
-        sharding.NumTiles() == sharding_tiles) {
-      if (!hlo_sharding_util::IsSubTilingOrEqualSharding(
-              instruction->shape(), sharding, instruction->sharding())) {
-        VLOG(10) << "Not merging because of different device distribution";
-        VLOG(10) << "Instr sharding: " << instruction->sharding().ToString();
-        VLOG(10) << "New sharding " << sharding.ToString();
-        return false;
-      }
-    }
-    instruction->set_sharding(std::move(sharding));
+  if (auto new_sharding = ReturnImprovedSharding(
+          std::move(sharding), instruction, may_combine_partial_sharding,
+          allow_aggressive_resharding)) {
+    instruction->set_sharding(std::move(*new_sharding));
     return true;
   }
   return false;
@@ -170,6 +128,12 @@ bool IsPassthroughCustomOps(const HloInstruction* hlo) {
           absl::Span<const absl::string_view>{"Sharding", "X64Combine"})) {
     return true;
   }
+
+  // Added by mesha
+  if (hlo->IsCustomCall("pipeline_marker")) {
+    return true;
+  }
+  
   if (hlo->operand_count() != 1 || !hlo->shape().IsArray() ||
       !hlo->operand(0)->shape().IsArray() ||
       hlo->operand(0)->shape().rank() != hlo->shape().rank()) {
@@ -968,32 +932,24 @@ bool RefineManualAutoShardingFromAuto(
   // We are also merging the non-manual sharding into the manual sharding. To
   // leverage existing merging implementation, we treat the manual dim as a
   // data dim, and add it right before the replication dim.
-  auto partial_tiling_for_manual = partial_rep.tile_assignment();
   std::vector<int64_t> partial_manual_shape(
-      partial_tiling_for_manual.dimensions().begin(),
-      partial_tiling_for_manual.dimensions().end());
+      partial_rep.tile_assignment().dimensions().begin(),
+      partial_rep.tile_assignment().dimensions().end());
   partial_manual_shape.insert(partial_manual_shape.begin() + data_rank, 1);
-  partial_tiling_for_manual.Reshape(partial_manual_shape);
+  auto partial_tiling_for_manual =
+      partial_rep.tile_assignment().Reshape(partial_manual_shape);
   HloSharding partial_rep_for_manual = HloSharding::PartialTile(
       partial_tiling_for_manual, partial_rep.metadata());
-  Array<int64_t> man_tiling = manual_sharding->tile_assignment();
+  auto man_tiling = manual_sharding->tile_assignment();
   if (manual_sharding->subgroup_types().back() != OpSharding::REPLICATED) {
     // Move the manual dim before replication dim.
-    std::vector<int64_t> transposed_dims(man_tiling.dimensions().begin(),
-                                         man_tiling.dimensions().end());
-    transposed_dims[data_rank] = transposed_dims.back();
-    transposed_dims.back() = man_tiling.dim(data_rank);
-    Array<int64_t> transposed(transposed_dims);
-    man_tiling.Each([&](absl::Span<const int64_t> indices, int64_t device) {
-      std::vector<int64_t> xposed_idx(indices.begin(), indices.end() - 2);
-      xposed_idx.push_back(indices.back());
-      xposed_idx.push_back(indices[data_rank]);
-      transposed(xposed_idx) = device;
-    });
-    man_tiling = std::move(transposed);
+    std::vector<int> transposed_dims(man_tiling.num_dimensions());
+    absl::c_iota(transposed_dims, 0);
+    std::swap(transposed_dims.back(), transposed_dims[data_rank]);
+    man_tiling = man_tiling.Transpose(transposed_dims);
   }
-  HloSharding tmp_sharding_for_merging =
-      HloSharding::PartialTile(man_tiling, manual_sharding->metadata());
+  HloSharding tmp_sharding_for_merging = HloSharding::PartialTile(
+      std::move(man_tiling), manual_sharding->metadata());
   if (!hlo_sharding_util::MergeShardingIfCompatible(
           partial_rep_for_manual, tmp_sharding_for_merging.NumTiles() + 1,
           &tmp_sharding_for_merging)) {
@@ -1462,7 +1418,7 @@ std::optional<HloSharding> ShardingPropagation::GetShardingFromUser(
       }
 
       const int64_t cdim = user.concatenate_dimension();
-      const Array<int64_t>& tile_assignment = user.sharding().tile_assignment();
+      auto& tile_assignment = user.sharding().tile_assignment();
       if (tile_assignment.dim(cdim) == 1) {
         // If we are concatenating along a non-sharded dimension then the
         // operands should have the same sharding as the result.
@@ -1493,7 +1449,8 @@ std::optional<HloSharding> ShardingPropagation::GetShardingFromUser(
       end_indices[cdim] = CeilOfRatio(
           start_offset + instruction.shape().dimensions(cdim), tile_shape);
       auto new_tile_assignment =
-          tile_assignment.Slice(start_indices, end_indices);
+          tile_assignment.array().Slice(start_indices, end_indices);
+
       if (new_tile_assignment.num_elements() == 1) {
         return HloSharding::AssignDevice(*new_tile_assignment.begin(),
                                          user.sharding().metadata());
@@ -1980,14 +1937,24 @@ bool ShardingPropagation::InferShardingFromOperands(
         const HloInstruction* operand = instruction->operand(i);
         if (operand->has_sharding()) {
           if (operand->shape().IsTuple()) {
-            for (int64_t i = 0, e = ShapeUtil::GetLeafCount(operand->shape());
-                 i < e; ++i) {
-              if (is_more_specific(operand->sharding().tuple_elements()[i],
-                                   sub_shardings[sub_sharding_index + i])) {
-                sub_shardings[sub_sharding_index + i] =
-                    operand->sharding().tuple_elements()[i];
+            // hhq
+            // for (int64_t i = 0, e = ShapeUtil::GetLeafCount(operand->shape());
+            //      i < e; ++i) {
+            //   if (is_more_specific(operand->sharding().tuple_elements()[i],
+            //                        sub_shardings[sub_sharding_index + i])) {
+            //     sub_shardings[sub_sharding_index + i] =
+            //         operand->sharding().tuple_elements()[i];
+            //   }
+            // }
+            for (int64_t j = 0, e = ShapeUtil::GetLeafCount(operand->shape());
+                 j < e; ++j) {    
+              if (is_more_specific(operand->sharding().tuple_elements()[j],
+                                   sub_shardings[sub_sharding_index + j])) {
+                sub_shardings[sub_sharding_index + j] =
+                    operand->sharding().tuple_elements()[j];
               }
             }
+
           } else {
             if (is_more_specific(operand->sharding(),
                                  sub_shardings[sub_sharding_index])) {
@@ -2043,7 +2010,7 @@ bool ShardingPropagation::InferShardingFromOperands(
         target_tile_assignment_dimensions.push_back(
             op->sharding().tile_assignment().dim(i));
       }
-      Array<int64_t> new_tile_assignment = op->sharding().tile_assignment();
+      auto new_tile_assignment = op->sharding().tile_assignment();
       new_tile_assignment.Reshape(target_tile_assignment_dimensions);
       HloSharding new_sharding =
           op->sharding().ReplicateOnLastTileDim()

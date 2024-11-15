@@ -269,7 +269,8 @@ StatusOr<HloInstruction*> PartitionGatherOperandPassthroughDimensions(
               operand.base_shape(), operand.sharding(), *gather, slice_sizes)) {
     const auto operand_grouping_dims =
         hlo_sharding_util::GetGatherOperandPassthroughOperandDims(
-            operand.base_shape(), operand.sharding(), *gather, slice_sizes);
+            operand.base_shape(), *gather, slice_sizes);
+
     const int64_t num_groups =
         operand.sharding().NumTiles(operand_grouping_dims);
     const int64_t num_tiles = operand.sharding().TotalNumTiles();

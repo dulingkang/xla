@@ -26,6 +26,44 @@ limitations under the License.
 
 namespace xla {
 
+// Multiply two non-negative int64_t's, returning the two's complement result
+// and a bool which is true when overflow or negative inputs occurs and false
+// otherwise.
+ABSL_ATTRIBUTE_ALWAYS_INLINE inline std::pair<int64_t, bool>
+OverflowSafeMultiply(const int64_t x, const int64_t y) {
+#if ABSL_HAVE_BUILTIN(__builtin_mul_overflow)
+  int64_t result;
+  bool bad = __builtin_mul_overflow(x, y, &result);
+  bad |= x < 0;
+  bad |= y < 0;
+  return std::make_pair(result, bad);
+#else
+  // Multiply in uint64_t rather than int64_t since signed overflow is
+  // undefined. Negative values will wrap around to large unsigned values in the
+  // casts (see section 4.7 [conv.integral] of the C++14 standard).
+  const uint64_t ux = x;
+  const uint64_t uy = y;
+  const uint64_t uxy = ux * uy;
+
+  // Cast back to signed.
+  int64_t result = static_cast<int64_t>(uxy);
+  bool bad = result < 0;
+
+  // Check if we overflow uint64_t, using a cheap check if both inputs are small
+  if (ABSL_PREDICT_FALSE((ux | uy) >> 32 != 0)) {
+    if (x < 0 || y < 0) {
+      // Ensure nonnegativity.  Note that negative numbers will appear "large"
+      // to the unsigned comparisons above.
+      bad = true;
+    } else if (ux != 0 && uxy / ux != uy) {
+      // Otherwise, detect overflow using a division
+      bad = true;
+    }
+  }
+  return std::make_pair(result, bad);
+#endif
+}
+
 // Multiply two nonnegative int64_t's, returning negative for overflow
 inline int64_t MultiplyWithoutOverflow(const int64_t x, const int64_t y) {
   // Multiply in uint64_t rather than int64_t since signed overflow is
