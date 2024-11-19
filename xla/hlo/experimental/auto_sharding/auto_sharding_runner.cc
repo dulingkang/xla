@@ -252,7 +252,7 @@ Status RunAutoShardingPass(HloModule* hlo_module,
       as_option.force_strategy_inst_indices = pass_context::GetIntVector("auto_sharding::force_strategy_inst_indices");
       as_option.force_strategy_stra_names = pass_context::GetStringVector("auto_sharding::force_strategy_stra_names");
       spmd_pipeline.AddPass<AutoSharding>(as_option);
-
+      
       spmd_pipeline.AddPass<ShardingPropagation>(/*is_spmd=*/true, /*propagate_metadata=*/false,
         /*allow_spmd_sharding_propagation_to_output=*/absl::Span<const bool>{true});
 

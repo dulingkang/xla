@@ -2854,8 +2854,16 @@ void SetHloSharding(const HloInstructionSequence& sequence,
             !last_iteration) {
           set_tuple_sharding = false;
         }
-        output_flattened_shardings.push_back(
+        // todo: hhq
+        // output_flattened_shardings.push_back(
+        //     t->leaf_vector[stra_idx].output_sharding);
+        if (inst->opcode() == HloOpcode::kCustomCall) {
+          output_flattened_shardings.push_back(HloSharding::Replicate());          
+        } else {
+          output_flattened_shardings.push_back(
             t->leaf_vector[stra_idx].output_sharding);
+        }
+        // std::cout << "wxx1:" << inst->opcode() << " " << output_flattened_shardings.back() << std::endl;
       }
       // Create Tuple HloSharding.
       int i = 0;
@@ -4266,6 +4274,7 @@ StatusOr<AutoShardingResult> AutoShardingImplementation::RunAutoSharding(
   for (size_t mesh_idx = 0; mesh_idx < partial_mesh_shapes.size(); ++mesh_idx) {
     // Adjust existing shardings with current partial mesh shapes;
     std::vector<int64_t> mesh_shape = partial_mesh_shapes[mesh_idx];
+
     LOG(INFO) << "Processing partial mesh shape: "
               << spmd::ToString(mesh_shape);
     Array<int64_t> device_mesh(mesh_shape);
@@ -4274,6 +4283,7 @@ StatusOr<AutoShardingResult> AutoShardingImplementation::RunAutoSharding(
     for (auto i : mesh_shape) {
       total_devices *= i;
     }
+
     if (mesh_idx != partial_mesh_shapes.size() - 1) {
       auto changed_or = spmd::AdjustShardingsWithPartialMeshShape(
           sequence.instructions(), mesh_shape, total_devices,
@@ -4286,6 +4296,7 @@ StatusOr<AutoShardingResult> AutoShardingImplementation::RunAutoSharding(
         return changed_or.status();
       }
     }
+
     std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(total_devices);
     std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
     device_mesh.SetValues(device_mesh_ids);
@@ -4394,6 +4405,7 @@ StatusOr<AutoShardingResult> AutoShardingImplementation::RunAutoSharding(
       GenerateReduceScatter(sequence, alias_map, ins_depth_map, strategy_map,
                             cost_graph, s_val, cluster_env, solver_option);
     }
+    
     // ----- Set Sharding -----
     SetHloSharding(sequence, strategy_map, cost_graph, s_val,
                    (mesh_idx == partial_mesh_shapes.size() - 1));
