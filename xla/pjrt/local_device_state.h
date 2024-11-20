@@ -172,14 +172,17 @@ class LocalDeviceState {
 
   Semaphore& compute_semaphore() { return compute_semaphore_; }
 
+  void SetPrngSeed(int seed);
+
   // Returns a fresh, PRNG-generated random seed for an XLA computation.
   int GetNewPrngSeed();
 
-
+  Status SynchronizeAllActivity();
+  
   // Added by Mesha
   se::Stream* GetLastDeviceToDeviceStream();
  private:
-  Status SynchronizeAllActivity();
+  
 
   AllocationModel allocation_model_;
 

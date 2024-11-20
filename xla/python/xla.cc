@@ -221,6 +221,73 @@ PYBIND11_MODULE(xla_extension, m) {
                              [](const ClientAndPtr<PjRtDevice>& device) {
                                return device.client();
                              })
+      // Added by mesha
+      .def("set_seed", [](const PjRtDevice& device, int seed) {
+            xla::PjRtClient* client = device.client();
+            xla::PjRtStreamExecutorClient* stream_client =
+                dynamic_cast<xla::PjRtStreamExecutorClient*>(client);
+			CHECK(stream_client != nullptr);
+            stream_client->device_state(device.local_hardware_id()).SetPrngSeed(seed);
+            return OkStatus();
+          })
+      .def("memory_allocated", [](const PjRtDevice& device) {
+            const int64_t invalid = -1;
+
+            xla::PjRtClient* client = device.client();
+            if (client->platform_name() != "gpu") {
+              return invalid;
+            }
+            xla::PjRtStreamExecutorClient* gpu_client =
+                dynamic_cast<xla::PjRtStreamExecutorClient*>(client);
+			CHECK(gpu_client != nullptr);
+            return gpu_client->allocator()->bytes_used(device.local_hardware_id());
+          })
+      .def("max_memory_allocated", [](const PjRtDevice& device) {
+            const int64_t invalid = -1;
+
+            xla::PjRtClient* client = device.client();
+            if (client->platform_name() != "gpu") {
+              return invalid;
+            }
+            xla::PjRtStreamExecutorClient* gpu_client =
+                dynamic_cast<xla::PjRtStreamExecutorClient*>(client);
+			CHECK(gpu_client != nullptr);
+            return gpu_client->allocator()->bytes_peak_in_use(device.local_hardware_id());
+          })
+      .def("available_memory", [](const PjRtDevice& device) {
+            const int64_t invalid = -1;
+
+            xla::PjRtClient* client = device.client();
+            if (client->platform_name() != "gpu") {
+              return invalid;
+            }
+            xla::PjRtStreamExecutorClient* gpu_client =
+                dynamic_cast<xla::PjRtStreamExecutorClient*>(client);
+			CHECK(gpu_client != nullptr);
+            return gpu_client->allocator()->bytes_available(device.local_hardware_id());
+          })
+      .def("clear_memory_stats", [](const PjRtDevice& device) {
+            const bool invalid = false;
+
+            xla::PjRtClient* client = device.client();
+            if (client->platform_name() != "gpu") {
+              return invalid;
+            }
+            xla::PjRtStreamExecutorClient* gpu_client =
+                dynamic_cast<xla::PjRtStreamExecutorClient*>(client);
+			CHECK(gpu_client != nullptr);
+            return gpu_client->allocator()->ClearStats(device.local_hardware_id());
+          })
+      .def("synchronize_all_activity", [](PjRtDevice& device) {
+             PjRtStreamExecutorDevice* stream_device =
+               dynamic_cast<PjRtStreamExecutorDevice*>(&device);
+             CHECK_NE(stream_device, nullptr);
+             TF_ASSIGN_OR_RETURN(LocalDeviceState* local_device,
+                                 stream_device->GetLocalDeviceState());
+             local_device->SynchronizeAllActivity();
+             return OkStatus();
+           })
+      // Added by mesha end.                    
       .def("__str__", &PjRtDevice::DebugString)
       .def("__repr__", &PjRtDevice::ToString)
       .def("transfer_to_infeed",
